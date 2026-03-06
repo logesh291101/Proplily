@@ -1,0 +1,81 @@
+name: proplilly
+description: "Property monitoring and management application"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI & Icons
+  cupertino_icons:
+  
+  # State Management
+  provider:
+  
+  # Navigation
+  go_router:
+  
+  # Authentication & Storage
+  shared_preferences:
+  flutter_secure_storage:
+  
+  # HTTP & API
+  http:
+  dio:
+  
+  # Maps & Location
+  google_maps_flutter:
+  geolocator:
+  geocoding:
+  flutter_map: ^8.0.0
+  latlong2: ^0.9.1
+  
+  # File & Image Handling
+  image_picker:
+  file_picker:
+  path_provider:
+  
+  # Forms & Validation
+  flutter_form_builder:
+  form_builder_validators:
+  
+  # UI Components
+  flutter_svg:
+  cached_network_image:
+  intl:
+
+  
+  # Notifications
+  #flutter_local_notifications:
+  
+  # Payment (if needed)
+  # in_app_purchase: ^3.1.11
+  
+  # Utilities
+  uuid:
+  url_launcher:
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/proplilly_logo.jfif"
+  min_sdk_android: 21 # android min sdk value
+
+flutter:
+  uses-material-design: true
+
+  # Assets
+  assets:
+    - assets/
+
