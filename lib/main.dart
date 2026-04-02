@@ -1,22 +1,94 @@
+import 'dart:developer';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:proplilly/providers/auth_provider.dart';
+import 'package:proplilly/providers/user_provider.dart';
+import 'package:proplilly/providers/property_provider.dart';
+import 'package:proplilly/providers/admin_provider.dart';
+import 'package:proplilly/providers/coordinator_provider.dart';
+import 'package:proplilly/providers/subscription_provider.dart';
+import 'package:proplilly/providers/remote_config.dart';
 import 'package:proplilly/utils/router.dart';
+import 'package:proplilly/utils/preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'theme/app_theme.dart';
+import 'theme/auth_theme.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+
+@pragma('vm:enrty-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message)async{
+  await Firebase.initializeApp();
 }
 
-class MyApp extends StatelessWidget {
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await Prefs.init();
+  runApp(const MyApp());
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  RemoteConfigServices remoteConfigServices = RemoteConfigServices();
+  await remoteConfigServices.setupRemoteConfig();
+}
+
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+Future<void> requestNotificationPermission() async{
+  var status = await Permission.notification.status;
+  if(status.isDenied){
+    status = await Permission.notification.request();
+  }
+  else if(status.isPermanentlyDenied){
+     openAppSettings();
+  }
+}
+
+ Future<void> setupFcm() async{
+  String? token = await FirebaseMessaging.instance.getToken();
+  log("Token---$token}");
+
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+
+  },);
+
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+          openUrl(message);
+  },);
+
+  RemoteMessage? initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if(initialMessage != null){
+    openUrl(initialMessage);
+  }
+
+  FirebaseMessaging.instance.subscribeToTopic("proplilly_android");
+ }
+
+ Future<void> openUrl(RemoteMessage message) async{
+  final url = message.data['notification_url'];
+  final Uri finalUrl = Uri.parse(url);
+  if(url.isNotEmpty){
+    launchUrl(finalUrl,mode:LaunchMode.externalApplication);
+  }
+ }
+
+class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => PropertyProvider()),
+        ChangeNotifierProvider(create: (_) => AdminProvider()),
+        ChangeNotifierProvider(create: (_) => CoordinatorProvider()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
       ],
       child: MaterialApp.router(
         title: 'PropLilly',

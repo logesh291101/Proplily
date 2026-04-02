@@ -160,7 +160,7 @@ class _ServiceRequestManagerState extends State<ServiceRequestManager> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       appBar: AppBar(title: const Text('Service Requests')),
       body: _requests.isEmpty
@@ -202,7 +202,7 @@ class _ServiceRequestManagerState extends State<ServiceRequestManager> {
                 );
               },
             ),
-    );
+    ));
   }
 
   Widget _buildStatusChip(ServiceRequestStatus status) {

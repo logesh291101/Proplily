@@ -36,7 +36,7 @@ class _HomeContentState extends State<_HomeContent> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
@@ -69,7 +69,7 @@ class _HomeContentState extends State<_HomeContent> {
           BottomNavigationBarItem(icon: Icon(Icons.contact_mail), label: 'Contact'),
         ],
       ),
-    );
+    ));
   }
 }
 

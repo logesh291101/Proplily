@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/property_model.dart';
 import '../../models/user_model.dart';
+import '../../services/property_service.dart';
 import '../../theme/auth_theme.dart';
 
 class PropertyAssignmentScreen extends StatefulWidget {
@@ -13,39 +14,30 @@ class PropertyAssignmentScreen extends StatefulWidget {
 }
 
 class _PropertyAssignmentScreenState extends State<PropertyAssignmentScreen> {
-  // Mock data for unassigned properties
-  final List<Property> _availableProperties = [
-    Property(
-      id: 'prop_1',
-      propertyName: 'Palm Heights',
-      propertyType: PropertyType.apartment,
-      propertyAddress: 'Apt 201, 5th Main, HSR Layout, Bangalore',
-      ownerName: 'Suresh Kumar',
-      contactNumber: '+91 9000080000',
-      latitude: 12.9103,
-      longitude: 77.6450,
-      ownerId: 'owner_1',
-      createdAt: DateTime.now(),
-    ),
-    Property(
-      id: 'prop_2',
-      propertyName: 'Rose Garden',
-      propertyType: PropertyType.independentHouse,
-      propertyAddress: 'No 12, 2nd Cross, Indiranagar, Bangalore',
-      ownerName: 'Meera Reddy',
-      contactNumber: '+91 9888876666',
-      latitude: 12.9784,
-      longitude: 77.6408,
-      ownerId: 'owner_2',
-      createdAt: DateTime.now(),
-    ),
-  ];
+  List<Property> _availableProperties = [];
+  bool _isLoading = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadProperties();
+  }
+
+  Future<void> _loadProperties() async {
+    setState(() => _isLoading = true);
+    final props = await PropertyService().getApprovedProperties();
+    if (mounted) {
+      setState(() {
+        _availableProperties = props;
+        _isLoading = false;
+      });
+    }
+  }
   String _selectedFrequency = 'Weekly';
   final List<String> _frequencies = ['Daily', 'Weekly', 'Bi-weekly', 'Monthly'];
   final Set<String> _selectedPropertyIds = {};
 
-  void _handleAssign() {
+  void _handleAssign() async {
     if (_selectedPropertyIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select at least one property')),
@@ -53,16 +45,22 @@ class _PropertyAssignmentScreenState extends State<PropertyAssignmentScreen> {
       return;
     }
     
-    // TODO: Implement assignment logic
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Assigned ${_selectedPropertyIds.length} properties to ${widget.coordinator.fullName} with $_selectedFrequency visits.')),
-    );
-    Navigator.pop(context);
+    // Implement assignment logic
+    for (final propId in _selectedPropertyIds) {
+      await PropertyService().assignCoordinator(propId, widget.coordinator.id);
+    }
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Assigned ${_selectedPropertyIds.length} properties to ${widget.coordinator.fullName} with $_selectedFrequency visits.')),
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       appBar: AppBar(
         title: const Text('Assign Properties'),
@@ -133,7 +131,11 @@ class _PropertyAssignmentScreenState extends State<PropertyAssignmentScreen> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : _availableProperties.isEmpty
+                ? const Center(child: Text('No approved properties available to assign'))
+                : ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: _availableProperties.length,
               itemBuilder: (context, index) {
@@ -172,6 +174,6 @@ class _PropertyAssignmentScreenState extends State<PropertyAssignmentScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
 }

@@ -12,7 +12,7 @@ class HelperDashboard extends StatelessWidget {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.currentUser;
 
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       appBar: AppBar(
         title: const Text('Helper Dashboard'),
         actions: [
@@ -91,6 +91,6 @@ class HelperDashboard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }

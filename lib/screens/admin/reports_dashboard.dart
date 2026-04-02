@@ -6,7 +6,7 @@ class ReportsDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       appBar: AppBar(title: const Text('System Reports')),
       body: SingleChildScrollView(
@@ -44,7 +44,7 @@ class ReportsDashboard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildChartSection(String title, String subtitle, List<Widget> bars) {

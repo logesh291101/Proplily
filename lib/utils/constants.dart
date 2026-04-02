@@ -19,7 +19,4 @@ class AppConstants {
   static const int otpLength = 6;
   static const int otpResendCooldown = 60; // seconds
 
-  // Master Credentials
-  static const String masterEmail = 'logesh.k@rubixe.com';
-  static const String masterPassword = 'welcome@21';
 }

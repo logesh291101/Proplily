@@ -36,7 +36,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       body: SingleChildScrollView(
         child: Column(
@@ -169,6 +169,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 }

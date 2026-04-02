@@ -154,7 +154,7 @@ class _HelperManagementDashboardState extends State<HelperManagementDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       appBar: AppBar(title: const Text('Helper Management')),
       body: ListView.builder(
@@ -185,7 +185,7 @@ class _HelperManagementDashboardState extends State<HelperManagementDashboard> {
           );
         },
       ),
-    );
+    ));
   }
 
   Widget _buildStatusChip(bool isActive) {

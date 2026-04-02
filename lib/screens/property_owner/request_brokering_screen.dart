@@ -61,7 +61,7 @@ class _RequestBrokeringScreenState extends State<RequestBrokeringScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       appBar: AppBar(),
       body: Form(
         key: _formKey,
@@ -218,7 +218,7 @@ class _RequestBrokeringScreenState extends State<RequestBrokeringScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   String _getPropertyTypeLabel(PropertyType type) {

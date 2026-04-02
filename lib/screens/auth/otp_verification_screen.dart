@@ -8,10 +8,12 @@ import '../../widgets/proplilly_logo.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   final String email;
+  final bool isForgotPassword;
 
   const OTPVerificationScreen({
     super.key,
     required this.email,
+    this.isForgotPassword = false,
   });
 
   @override
@@ -84,6 +86,12 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     if (!mounted) return;
 
     if (success) {
+      if (widget.isForgotPassword) {
+        context.push('/reset-password', extra: {
+          'email': widget.email,
+        });
+        return;
+      }
       final user = authProvider.currentUser;
       if (user != null) {
         switch (user.userType) {
@@ -135,7 +143,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       body: SingleChildScrollView(
         child: Column(
@@ -197,8 +205,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(6, (index) {
-                        return SizedBox(
-                          width: 45,
+                        return Flexible(
+                          child: SizedBox(
+                            width: 42,
                           child: TextField(
                             controller: _otpControllers[index],
                             focusNode: _focusNodes[index],
@@ -222,7 +231,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                             ),
                             onChanged: (value) => _onOTPChanged(index, value),
                           ),
-                        );
+                        ));
                       }),
                     ),
                     const SizedBox(height: 40),
@@ -259,6 +268,6 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 }

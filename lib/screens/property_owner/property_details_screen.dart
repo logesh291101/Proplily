@@ -15,7 +15,7 @@ class PropertyDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final propertyService = PropertyService();
 
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       appBar: AppBar(),
       body: FutureBuilder<Property?>(
         future: propertyService.getPropertyById(propertyId),
@@ -49,31 +49,27 @@ class PropertyDetailsScreen extends StatelessWidget {
                 const SizedBox(height: 24),
                 _buildDetailRow('Property Type', _getPropertyTypeLabel(property.propertyType)),
                 _buildDetailRow('Address', property.propertyAddress),
-                _buildDetailRow('Owner Name', property.ownerName),
-                _buildDetailRow('Contact Number', property.contactNumber),
                 _buildDetailRow('Location', '${property.latitude}, ${property.longitude}'),
-                if (property.rejectionReason != null) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.deepPurple.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.deepPurple.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Rejection Reason:',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.deepPurple,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(property.rejectionReason!),
-                      ],
+                if (property.city.isNotEmpty) _buildDetailRow('City', property.city),
+                const SizedBox(height: 24),
+                if (property.propertyPhoto != null) ...[
+                  const Text(
+                    'Property Photo',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.deepPurple),
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      property.propertyPhoto!,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 200,
+                        color: Colors.grey.shade200,
+                        child: const Center(child: Icon(Icons.broken_image)),
+                      ),
                     ),
                   ),
                 ],
@@ -82,7 +78,7 @@ class PropertyDetailsScreen extends StatelessWidget {
           );
         },
       ),
-    );
+    ));
   }
 
   Widget _buildDetailRow(String label, String value) {
@@ -117,6 +113,10 @@ class PropertyDetailsScreen extends StatelessWidget {
     String label;
 
     switch (status) {
+      case PropertyStatus.propertyAdded:
+        color = Colors.blue.shade200;
+        label = 'Pending Review';
+        break;
       case PropertyStatus.pendingVerification:
         color = Colors.deepPurple.shade200;
         label = 'Pending Verification';
@@ -129,6 +129,13 @@ class PropertyDetailsScreen extends StatelessWidget {
         color = Colors.deepPurple.shade700;
         label = 'Rejected';
         break;
+      case PropertyStatus.cancelled:
+        color = Colors.grey.shade400;
+        label = 'Cancelled';
+        break;
+      default:
+        color = Colors.grey;
+        label = 'Unknown';
     }
 
     final textColor = color == Colors.deepPurple.shade200 ? Colors.deepPurple.shade900 : Colors.white;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/auth_theme.dart';
@@ -15,7 +16,6 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  bool _emailSent = false;
   bool _isLoading = false;
 
   @override
@@ -31,23 +31,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.forgotPassword(_emailController.text.trim());
 
-      if (!mounted) return;
-      setState(() {
-        _isLoading = false;
-        if (success) {
-          _emailSent = true;
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to send reset link. Please try again.')),
-          );
-        }
-      });
+      if (success) {
+        context.push('/otp-verification', extra: {
+          'email': _emailController.text.trim(),
+          'isForgotPassword': true,
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to send verification code. Please try again.')),
+        );
+      }
+      setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       body: SingleChildScrollView(
         child: Column(
@@ -95,14 +95,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: AuthTheme.authCard(
-                child: _emailSent ? _buildSuccessView() : _buildFormView(),
+                child: _buildFormView(),
               ),
             ),
             const SizedBox(height: 24),
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _buildFormView() {
@@ -112,7 +112,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Enter your email or phone number and we will send you a reset link.',
+            'Enter your email or phone number and we will send you a 6-digit verification code.',
             style: TextStyle(
               fontSize: 15,
               color: AuthTheme.textSecondary,
@@ -144,52 +144,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     width: 20,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('Send Reset Link'),
+                : const Text('Send Verification Code'),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildSuccessView() {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.check_circle_outline, color: Colors.green, size: 48),
-        ),
-        const SizedBox(height: 24),
-        const Text(
-          'Email Sent!',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AuthTheme.textPrimary),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Please check your inbox for instructions to reset your password.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AuthTheme.textSecondary, fontSize: 15, height: 1.5),
-        ),
-        const SizedBox(height: 32),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              foregroundColor: AuthTheme.primary,
-              side: const BorderSide(color: AuthTheme.primary),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Back to Login', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ),
-      ],
-    );
   }
-}
+

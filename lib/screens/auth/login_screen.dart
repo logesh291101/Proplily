@@ -1,11 +1,16 @@
+import 'dart:developer';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'dart:io';
 import '../../models/user_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/auth_theme.dart';
+import '../../utils/preferences.dart';
 import '../../widgets/proplilly_logo.dart';
+import '../../widgets/update_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -25,8 +30,46 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    _emailController = TextEditingController(text: 'logesh.k@rubixe.com');
-    _passwordController = TextEditingController(text: 'welcome@21');
+    checkRemoteConfig();
+    _emailController = TextEditingController();
+    _passwordController = TextEditingController();
+  }
+  
+  Future<void> _checkUpdate() async {
+    final PackageInfo packageInfo = await PackageInfo.fromPlatform();
+    final String currentVersion = packageInfo.version;
+
+    String remoteVersion = "";
+    String updateReason = "";
+    String storeUrl = "";
+    bool isForceUpdate = Prefs.getString("force_update") == "true";
+
+    if (Platform.isAndroid) {
+      remoteVersion = Prefs.getString("android_version") ?? "";
+      updateReason = Prefs.getString("androidupdate_reason") ?? "";
+      storeUrl = Prefs.getString("playstore_url") ?? "";
+    } else if (Platform.isIOS) {
+      remoteVersion = Prefs.getString("ios_version") ?? "";
+      updateReason = Prefs.getString("iosupdate_reason") ?? "";
+      storeUrl = Prefs.getString("appstore_url") ?? "";
+    }
+
+    if (remoteVersion.isNotEmpty && remoteVersion != currentVersion) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: !isForceUpdate,
+        builder: (context) => UpdateDialog(
+          updateReason: updateReason,
+          storeUrl: storeUrl,
+          isForceUpdate: isForceUpdate,
+        ),
+      );
+    }
+  }
+
+  Future<void> checkRemoteConfig() async {
+    await _checkUpdate();
   }
 
   @override
@@ -53,21 +96,39 @@ class _LoginScreenState extends State<LoginScreen> {
       if (success) {
         final user = authProvider.currentUser;
         if (user != null) {
+          log("Verified Server Role: ${user.userType.name.toLowerCase()}");
+          log("User Selected Type: ${_selectedUserType.name.toLowerCase()}");
+
+          // Strict Role Validation: Lowercase normalization for both
+          if (user.userType.name.toLowerCase() != _selectedUserType.name.toLowerCase()) {
+            log("Permission Denied: Selected type does not match account role.");
+            await authProvider.logout();
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Selected user type does not match your account role.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+            return;
+          }
+
+          // Role-specific Navigation
           switch (user.userType) {
-            case UserType.customer:
-              context.go('/home'); // Customer dashboard
+            case UserType.admin:
+              context.go('/admin/dashboard');
               break;
             case UserType.coordinator:
               context.go('/coordinator/dashboard');
               break;
-            case UserType.admin:
-              context.go('/admin/dashboard');
+            case UserType.customer:
+              context.go('/customer/dashboard');
               break;
           }
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid email or password')),
+          SnackBar(content: Text(authProvider.errorMessage ?? 'Invalid email or password')),
         );
       }
     }
@@ -113,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       body: SingleChildScrollView(
         child: Column(
@@ -121,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
             // Hero section with primary color
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 64, 24, 48),
+              padding: const EdgeInsets.all(25),
               decoration: AuthTheme.heroBackground(),
               child: Column(
                 children: [
@@ -129,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(10),
                     child: PropLillyLogo(height: 70, white: true),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 15),
                   const Text(
                     'Welcome Back',
                     style: TextStyle(
@@ -150,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 15),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: AuthTheme.authCard(
@@ -228,7 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 10),
                       ElevatedButton(
                         onPressed: _isLoading ? null : _handleLogin,
                         style: AuthTheme.primaryButton(),
@@ -243,7 +304,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               )
                             : const Text('Login'),
                       ),
-                      const SizedBox(height:20),
+                      const SizedBox(height:10),
                       // Row(
                       //   children: [
                       //     Expanded(child: Divider(color: Colors.grey.withOpacity(0.2))),
@@ -308,10 +369,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
-    );
+    ));
   }
 }

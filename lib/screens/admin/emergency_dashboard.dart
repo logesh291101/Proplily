@@ -1,28 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../models/service_request_model.dart'; // From models
+import '../../services/service_request_service.dart'; // The service
 import '../../theme/auth_theme.dart';
 
-enum IssueSeverity { low, medium, high, critical }
-enum IssueStatus { open, inProgress, resolved }
-
-class Issue {
-  final String id;
-  final String title;
-  final String descripton;
-  final String propertyId;
-  final IssueSeverity severity;
-  final IssueStatus status;
-  final DateTime timestamp;
-
-  Issue({
-    required this.id,
-    required this.title,
-    required this.descripton,
-    required this.propertyId,
-    required this.severity,
-    required this.status,
-    required this.timestamp,
-  });
-}
+// Removed Issue, IssueSeverity, IssueStatus since ServiceRequest covers it
 
 class EmergencyDashboard extends StatefulWidget {
   const EmergencyDashboard({super.key});
@@ -32,56 +13,38 @@ class EmergencyDashboard extends StatefulWidget {
 }
 
 class _EmergencyDashboardState extends State<EmergencyDashboard> {
-  // Mock data for issues
-  final List<Issue> _issues = [
-    Issue(
-      id: 'i1',
-      title: 'Emergency Service Request',
-      descripton: 'Property owner requested immediate assistance due to a water leak.',
-      propertyId: 'prop_1',
-      severity: IssueSeverity.critical,
-      status: IssueStatus.open,
-      timestamp: DateTime.now().subtract(const Duration(minutes: 45)),
-    ),
-    Issue(
-      id: 'i2',
-      title: 'Missed Visit Alert',
-      descripton: 'Scheduled visit for today was missed by coordinator_1.',
-      propertyId: 'prop_2',
-      severity: IssueSeverity.high,
-      status: IssueStatus.inProgress,
-      timestamp: DateTime.now().subtract(const Duration(hours: 3)),
-    ),
-    Issue(
-      id: 'i3',
-      title: 'Suspicious Activity Reported',
-      descripton: 'Coordinator reported unknown individuals loitering near the property.',
-      propertyId: 'prop_3',
-      severity: IssueSeverity.medium,
-      status: IssueStatus.resolved,
-      timestamp: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-  ];
+  List<ServiceRequest> _issues = [];
+  bool _isLoading = true;
 
-  void _updateIssueStatus(int index, IssueStatus newStatus) {
-    setState(() {
-      final issue = _issues[index];
-      _issues[index] = Issue(
-        id: issue.id,
-        title: issue.title,
-        descripton: issue.descripton,
-        propertyId: issue.propertyId,
-        severity: issue.severity,
-        status: newStatus,
-        timestamp: issue.timestamp,
-      );
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Issue status updated to ${newStatus.toString().split('.').last}')),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadIssues();
   }
 
-  void _showIssueDetails(Issue issue, int index) {
+  Future<void> _loadIssues() async {
+    setState(() => _isLoading = true);
+    final issues = await ServiceRequestService().getPendingEmergencyRequests();
+    if (mounted) {
+      setState(() {
+        _issues = issues;
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _updateIssueStatus(int index, ServiceRequestStatus newStatus) async {
+    final issueId = _issues[index].id;
+    final success = await ServiceRequestService().updateRequestStatus(issueId, newStatus);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Issue status updated to ${newStatus.toString().split('.').last}')),
+      );
+      _loadIssues();
+    }
+  }
+
+  void _showIssueDetails(ServiceRequest issue, int index) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -110,30 +73,30 @@ class _EmergencyDashboardState extends State<EmergencyDashboard> {
               children: [
                 Expanded(
                   child: Text(
-                    issue.title,
+                    'Emergency Request',
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
-                _buildSeverityChip(issue.severity),
+                _buildSeverityChip(),
               ],
             ),
             const SizedBox(height: 24),
-            _buildInfoRow(Icons.business_outlined, 'Property ID', issue.propertyId),
-            _buildInfoRow(Icons.access_time, 'Reported At', issue.timestamp.toString().split('.')[0]),
+            _buildInfoRow(Icons.business_outlined, 'Property ID', issue.propertyName ?? 'Unknown'),
+            _buildInfoRow(Icons.access_time, 'Reported At', issue.createdAt.toString().split('.')[0]),
             const SizedBox(height: 16),
             const Text('Description', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text(issue.descripton, style: const TextStyle(color: AuthTheme.textSecondary)),
+            Text(issue.description ?? 'No description', style: const TextStyle(color: AuthTheme.textSecondary)),
             const SizedBox(height: 32),
             const Text('Update Status', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Row(
               children: [
-                _buildStatusButton(index, IssueStatus.open, 'OPEN', Colors.blue),
+                _buildStatusButton(index, ServiceRequestStatus.pendingVerification, 'PENDING', Colors.blue),
                 const SizedBox(width: 8),
-                _buildStatusButton(index, IssueStatus.inProgress, 'IN PROGRESS', Colors.orange),
+                _buildStatusButton(index, ServiceRequestStatus.inProgress, 'IN PROGRESS', Colors.orange),
                 const SizedBox(width: 8),
-                _buildStatusButton(index, IssueStatus.resolved, 'RESOLVE', Colors.green),
+                _buildStatusButton(index, ServiceRequestStatus.completed, 'RESOLVE', Colors.green),
               ],
             ),
             const SizedBox(height: 16),
@@ -143,7 +106,7 @@ class _EmergencyDashboardState extends State<EmergencyDashboard> {
     );
   }
 
-  Widget _buildStatusButton(int index, IssueStatus status, String label, Color color) {
+  Widget _buildStatusButton(int index, ServiceRequestStatus status, String label, Color color) {
     bool isCurrent = _issues[index].status == status;
     return Expanded(
       child: ElevatedButton(
@@ -165,10 +128,12 @@ class _EmergencyDashboardState extends State<EmergencyDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       appBar: AppBar(title: const Text('Emergency & Issues')),
-      body: _issues.isEmpty
+      body: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : _issues.isEmpty
           ? const Center(child: Text('No active issues reported'))
           : ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -183,17 +148,17 @@ class _EmergencyDashboardState extends State<EmergencyDashboard> {
                     leading: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: _getSeverityColor(issue.severity).withOpacity(0.1),
+                        color: Colors.red.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.warning_amber_rounded, color: _getSeverityColor(issue.severity)),
+                      child: const Icon(Icons.warning_amber_rounded, color: Colors.red),
                     ),
-                    title: Text(issue.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: const Text('Emergency Request', style: TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 4),
-                        Text('Property: ${issue.propertyId}', style: const TextStyle(fontSize: 12)),
+                        Text('Property: ${issue.propertyName ?? 'Unknown'}', style: const TextStyle(fontSize: 12)),
                         const SizedBox(height: 8),
                         _buildStatusChip(issue.status),
                       ],
@@ -204,29 +169,30 @@ class _EmergencyDashboardState extends State<EmergencyDashboard> {
                 );
               },
             ),
-    );
+    ));
   }
 
-  Widget _buildSeverityChip(IssueSeverity severity) {
+  Widget _buildSeverityChip() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: _getSeverityColor(severity).withOpacity(0.1),
+        color: Colors.red.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        severity.toString().split('.').last.toUpperCase(),
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _getSeverityColor(severity)),
+      child: const Text(
+        'CRITICAL',
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red),
       ),
     );
   }
 
-  Widget _buildStatusChip(IssueStatus status) {
+  Widget _buildStatusChip(ServiceRequestStatus status) {
     Color color;
     switch (status) {
-      case IssueStatus.open: color = Colors.blue; break;
-      case IssueStatus.inProgress: color = Colors.orange; break;
-      case IssueStatus.resolved: color = Colors.green; break;
+      case ServiceRequestStatus.pendingVerification: color = Colors.blue; break;
+      case ServiceRequestStatus.inProgress: color = Colors.orange; break;
+      case ServiceRequestStatus.completed: color = Colors.green; break;
+      default: color = Colors.grey; break;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -241,14 +207,7 @@ class _EmergencyDashboardState extends State<EmergencyDashboard> {
     );
   }
 
-  Color _getSeverityColor(IssueSeverity severity) {
-    switch (severity) {
-      case IssueSeverity.low: return Colors.blue;
-      case IssueSeverity.medium: return Colors.yellow.shade800;
-      case IssueSeverity.high: return Colors.orange;
-      case IssueSeverity.critical: return Colors.red;
-    }
-  }
+// Removed _getSeverityColor
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(

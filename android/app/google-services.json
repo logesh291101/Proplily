@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "133940354735",
+    "project_id": "proplilly-fa461",
+    "storage_bucket": "proplilly-fa461.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133940354735:android:6e08a64dd5c42e77a93e5a",
+        "android_client_info": {
+          "package_name": "com.proplilly.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCbC9JjOkBQ9qycVrfF8X__xoZFZkHaQSQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

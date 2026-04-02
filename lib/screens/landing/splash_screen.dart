@@ -71,7 +71,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: Colors.white,
       body: Center(
         child: AnimatedBuilder(
@@ -85,6 +85,6 @@ class _SplashScreenState extends State<SplashScreen>
           child: const PropLillyLogo(height: 140, white: true),
         ),
       ),
-    );
+    ));
   }
 }

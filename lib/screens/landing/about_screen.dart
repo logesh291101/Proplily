@@ -8,7 +8,7 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
         slivers: [
@@ -33,7 +33,7 @@ class AboutScreen extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildSliverAppBar(BuildContext context) {
@@ -48,13 +48,13 @@ class AboutScreen extends StatelessWidget {
       ),
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: true,
-        title: const Text(
-          'About Us',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-          ),
-        ),
+        // title: const Text(
+        //   'About Us',
+        //   style: TextStyle(
+        //     fontWeight: FontWeight.bold,
+        //     letterSpacing: 0.5,
+        //   ),
+        // ),
         background: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(

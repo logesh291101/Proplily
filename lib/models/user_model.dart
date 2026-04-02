@@ -34,7 +34,7 @@ class User {
       email: json['email'] as String,
       phoneNumber: json['phoneNumber'] as String,
       userType: UserType.values.firstWhere(
-        (e) => e.toString().split('.').last == json['userType'],
+        (e) => e.name.toLowerCase() == (json['userType'] as String?)?.toLowerCase(),
         orElse: () => UserType.customer,
       ),
       isEmailVerified: json['isEmailVerified'] as bool? ?? false,

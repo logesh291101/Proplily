@@ -2,8 +2,8 @@ name: proplilly
 description: "Property monitoring and management application"
 publish_to: 'none'
 
-version: 1.0.0+1
-
+#version: 1.0.0+1
+version: 1.0.1+2
 environment:
   sdk: ^3.8.1
 
@@ -16,6 +16,12 @@ dependencies:
   
   # State Management
   provider:
+
+  # Firebase
+  firebase_remote_config:
+  firebase_core:
+  firebase_analytics:
+  firebase_messaging:
   
   # Navigation
   go_router:
@@ -23,6 +29,7 @@ dependencies:
   # Authentication & Storage
   shared_preferences:
   flutter_secure_storage:
+  permission_handler: 
   
   # HTTP & API
   http:
@@ -59,6 +66,7 @@ dependencies:
   # Utilities
   uuid:
   url_launcher:
+  package_info_plus: ^9.0.0
 
 dev_dependencies:
   flutter_test:
@@ -67,10 +75,10 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
 
 flutter_launcher_icons:
-  android: "launcher_icon"
+  android: true
   ios: true
   image_path: "assets/proplilly_logo.jfif"
-  min_sdk_android: 21 # android min sdk value
+
 
 flutter:
   uses-material-design: true

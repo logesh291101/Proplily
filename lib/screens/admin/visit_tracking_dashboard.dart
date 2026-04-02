@@ -133,7 +133,7 @@ class _VisitTrackingDashboardState extends State<VisitTrackingDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       appBar: AppBar(
         title: const Text('Visit Monitoring'),
@@ -200,7 +200,7 @@ class _VisitTrackingDashboardState extends State<VisitTrackingDashboard> {
                 );
               },
             ),
-    );
+    ));
   }
 
   Widget _buildFilterChip(VisitStatus? status, String label) {

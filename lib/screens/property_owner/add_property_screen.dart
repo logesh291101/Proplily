@@ -1,6 +1,12 @@
+import 'dart:developer';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../models/property_model.dart';
+import '../../providers/property_provider.dart';
 import '../../services/property_service.dart';
 import '../../widgets/osm_location_picker.dart';
 import '../../widgets/file_upload_widget.dart';
@@ -18,25 +24,41 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   final _formKey = GlobalKey<FormState>();
   final _propertyNameController = TextEditingController();
   final _propertyAddressController = TextEditingController();
-  final _ownerNameController = TextEditingController();
-  final _contactNumberController = TextEditingController();
-
+  final _cityController = TextEditingController();
   PropertyType _selectedPropertyType = PropertyType.land;
   double? _latitude;
   double? _longitude;
-  List<String> _documentUrls = [];
-  List<String> _propertyImages = [];
+  String? _propertyPhotoPath;
   bool _isLoading = false;
-
-  final PropertyService _propertyService = PropertyService();
 
   @override
   void dispose() {
     _propertyNameController.dispose();
     _propertyAddressController.dispose();
-    _ownerNameController.dispose();
-    _contactNumberController.dispose();
+    _cityController.dispose();
     super.dispose();
+  }
+
+  Future<void> _reverseGeocode(double lat, double lng) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        setState(() {
+          String address = [
+            place.street,
+            place.subLocality,
+            place.locality,
+            place.postalCode
+          ].where((e) => e != null && e.isNotEmpty).join(', ');
+          
+          _propertyAddressController.text = address;
+          _cityController.text = place.locality ?? place.subAdministrativeArea ?? '';
+        });
+      }
+    } catch (e) {
+      log("Geocoding error: $e");
+    }
   }
 
   Future<void> _handleSubmit() async {
@@ -52,24 +74,32 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       return;
     }
 
+    if (_propertyPhotoPath == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please upload a property photo'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
-    final property = await _propertyService.addProperty(
+    final success = await Provider.of<PropertyProvider>(context, listen: false).addProperty(
       propertyName: _propertyNameController.text.trim(),
       propertyType: _selectedPropertyType,
       propertyAddress: _propertyAddressController.text.trim(),
-      ownerName: _ownerNameController.text.trim(),
-      contactNumber: _contactNumberController.text.trim(),
+      city: _cityController.text.trim(),
       latitude: _latitude!,
       longitude: _longitude!,
-      documentUrls: _documentUrls,
-      propertyImages: _propertyImages,
+      propertyPhoto: File(_propertyPhotoPath!),
     );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
-
-    if (property != null) {
+    log("add property----$success");
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Property submitted for review successfully!'),
@@ -116,7 +146,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       appBar: AppBar(
         title: const Text('Add Property'),
@@ -165,39 +195,21 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                       controller: _propertyAddressController,
                       maxLines: 2,
                       decoration: AuthTheme.inputDecoration(
-                        hintText: 'Full Property Address',
+                        hintText: 'Full Property Address *',
                         prefixIcon: Icons.location_on_outlined,
                       ),
                       validator: (value) => 
-                        value?.isEmpty ?? true ? 'Enter property address' : null,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              AuthTheme.authCard(
-                child: Column(
-                  children: [
-                    _buildSectionHeader('Owner Information', Icons.person_outline),
-                    TextFormField(
-                      controller: _ownerNameController,
-                      decoration: AuthTheme.inputDecoration(
-                        hintText: 'Owner Full Name',
-                        prefixIcon: Icons.account_circle_outlined,
-                      ),
-                      validator: (value) => 
-                        value?.isEmpty ?? true ? 'Enter owner name' : null,
+                        value?.trim().isEmpty ?? true ? 'Property address is required' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
-                      controller: _contactNumberController,
-                      keyboardType: TextInputType.phone,
+                      controller: _cityController,
                       decoration: AuthTheme.inputDecoration(
-                        hintText: 'Contact Number',
-                        prefixIcon: Icons.phone_outlined,
+                        hintText: 'City *',
+                        prefixIcon: Icons.location_city_outlined,
                       ),
                       validator: (value) => 
-                        value?.isEmpty ?? true ? 'Enter contact number' : null,
+                        value?.trim().isEmpty ?? true ? 'City is required' : null,
                     ),
                   ],
                 ),
@@ -227,6 +239,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                               _latitude = lat;
                               _longitude = lng;
                             });
+                            _reverseGeocode(lat, lng);
                           },
                         ),
                       ),
@@ -239,29 +252,17 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('Media & Documents', Icons.upload_file_outlined),
+                    _buildSectionHeader('Property Photo', Icons.upload_file_outlined),
                     const Text(
-                      'Property Images',
+                      'Upload a photo of the property',
                       style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     FileUploadWidget(
                       allowedExtensions: const ['jpg', 'jpeg', 'png'],
-                      maxFiles: 5,
+                      maxFiles: 1,
                       onFilesSelected: (files) => 
-                        setState(() => _propertyImages = files),
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Ownership Documents (PDF/Images)',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    FileUploadWidget(
-                      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
-                      maxFiles: 3,
-                      onFilesSelected: (files) => 
-                        setState(() => _documentUrls = files),
+                        setState(() => _propertyPhotoPath = files.isNotEmpty ? files.first : null),
                     ),
                   ],
                 ),
@@ -286,7 +287,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   String _getPropertyTypeLabel(PropertyType type) {

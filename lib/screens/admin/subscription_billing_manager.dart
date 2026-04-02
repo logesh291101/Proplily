@@ -25,7 +25,7 @@ class _SubscriptionBillingManagerState extends State<SubscriptionBillingManager>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       appBar: AppBar(
         title: const Text('Billing & Subscriptions'),
@@ -55,7 +55,7 @@ class _SubscriptionBillingManagerState extends State<SubscriptionBillingManager>
               backgroundColor: AuthTheme.primary,
             )
           : null,
-    );
+    ));
   }
 
   Widget _buildPlanManagement() {

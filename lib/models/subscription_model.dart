@@ -14,6 +14,35 @@ enum SubscriptionStatus {
   cancelled,
 }
 
+class PlanDetails {
+  final SubscriptionPlan planKey;
+  String title;
+  double price;
+  String duration;
+  List<String> features;
+
+  PlanDetails({
+    required this.planKey,
+    required this.title,
+    required this.price,
+    required this.duration,
+    required this.features,
+  });
+
+  factory PlanDetails.fromJson(Map<String, dynamic> json) {
+    return PlanDetails(
+      planKey: SubscriptionPlan.values.firstWhere(
+        (e) => e.toString().split('.').last == (json['plan_key'] ?? json['planKey']),
+        orElse: () => SubscriptionPlan.basic,
+      ),
+      title: json['title'] ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      duration: json['duration'] ?? '',
+      features: List<String>.from(json['features'] ?? []),
+    );
+  }
+}
+
 class Subscription {
   final String id;
   final String userId;

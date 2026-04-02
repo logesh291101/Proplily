@@ -16,7 +16,7 @@ class ServicesScreen extends StatelessWidget {
       _ServiceItem(Icons.apartment, 'Real Estate Projects', 'Upcoming & ongoing projects.'),
     ];
 
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
@@ -95,7 +95,7 @@ class ServicesScreen extends StatelessWidget {
               )),
         ],
       ),
-    );
+    ));
   }
 }
 

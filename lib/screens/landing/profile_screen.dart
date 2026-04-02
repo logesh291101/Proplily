@@ -1,15 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/proplilly_logo.dart';
+import '../../providers/auth_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.currentUser;
+
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('My Profile')),
+        body: const Center(child: Text('User profile not found. Please log in again.')),
+      );
+    }
+
+    return SafeArea(child: Scaffold(
       appBar: AppBar(
+        title: const Text('My Profile'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         leading: IconButton(
@@ -20,88 +32,107 @@ class ProfileScreen extends StatelessWidget {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            PropLillyLogo(height: 100),
-            const SizedBox(height: 8),
-            Text(
-              'PropLilly',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+            const SizedBox(height: 20),
+            Center(
+              child: Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  CircleAvatar(
+                    radius: 56,
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    child: const Icon(Icons.person, size: 64, color: AppColors.primary),
                   ),
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: AppColors.secondary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                      onPressed: () {
+                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Edit profile picture tapped.')));
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const SizedBox(height: 16),
+            // Text(
+            //   user.fullName,
+            //   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            // ),
             Text(
-              'Professional property monitoring services for NRI and absentee property owners across India.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14, height: 1.5),
+              user.userType.toString().split('.').last.toUpperCase(),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14, letterSpacing: 1.2,fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 32),
-            _InfoCard(
-              title: 'About PropLilly',
-              content: 'Property monitoring, management, legal assistance, property valuation, and real estate services in India.',
-            ),
+            _buildProfileField(Icons.person_outline, 'Full Name', user.fullName),
             const SizedBox(height: 16),
-            _InfoCard(
-              title: 'Contact',
-              content: 'info@proplilly.com',
-            ),
+            _buildProfileField(Icons.email_outlined, 'Email Address', user.email),
             const SizedBox(height: 16),
-            _InfoCard(
-              title: 'Locations',
-              content: 'Bangalore • Hyderabad • Chennai • Mumbai • Pune',
-            ),
-            const SizedBox(height: 24),
-            Text(
-              '© 2026 PropLilly Realty Solutions. All rights reserved.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-              textAlign: TextAlign.center,
+            _buildProfileField(Icons.phone_outlined, 'Phone Number', user.phoneNumber),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.push('/change-password'),
+                icon: const Icon(Icons.lock_outline),
+                label: const Text('Change Password'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.grey.shade200,
+                  foregroundColor: Colors.black87,
+                  elevation: 0,
+                ),
+              ),
             ),
           ],
         ),
       ),
-    );
+    ));
   }
-}
 
-class _InfoCard extends StatelessWidget {
-  final String title;
-  final String content;
-
-  const _InfoCard({required this.title, required this.content});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildProfileField(IconData icon, String label, String value) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
             ),
+            child: Icon(icon, color: AppColors.primary, size: 24),
           ),
-          const SizedBox(height: 8),
-          Text(
-            content,
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-              height: 1.5,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
             ),
           ),
         ],

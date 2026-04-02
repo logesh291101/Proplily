@@ -154,7 +154,7 @@ class _CoordinatorManagementDashboardState extends State<CoordinatorManagementDa
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: AuthTheme.scaffoldBg,
       appBar: AppBar(title: const Text('Coordinator Management')),
       body: ListView.builder(
@@ -185,7 +185,7 @@ class _CoordinatorManagementDashboardState extends State<CoordinatorManagementDa
           );
         },
       ),
-    );
+    ));
   }
 
   Widget _buildStatusChip(bool isActive) {

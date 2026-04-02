@@ -61,7 +61,7 @@ class _RequestDocumentationScreenState extends State<RequestDocumentationScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       appBar: AppBar(),
       body: Form(
         key: _formKey,
@@ -202,7 +202,7 @@ class _RequestDocumentationScreenState extends State<RequestDocumentationScreen>
           ),
         ),
       ),
-    );
+    ));
   }
 
   String _getPropertyTypeLabel(PropertyType type) {

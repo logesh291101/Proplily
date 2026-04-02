@@ -16,7 +16,7 @@ class PropertiesScreen extends StatelessWidget {
       _PropertyItem('Land Parcel', 'Pune', '₹45 L', 'Ready for construction', Icons.landscape),
     ];
 
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: Colors.transparent, // Let parent handle bg or use themed
       body: Column(
         children: [
@@ -103,7 +103,7 @@ class PropertiesScreen extends StatelessWidget {
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-    );
+    ));
   }
 }
 

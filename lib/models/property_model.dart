@@ -6,9 +6,27 @@ enum PropertyType {
 }
 
 enum PropertyStatus {
+  propertyAdded,
   pendingVerification,
   approved,
   rejected,
+  cancelled,
+}
+
+extension PropertyStatusX on PropertyStatus {
+  String get displayName {
+    switch (this) {
+      case PropertyStatus.propertyAdded:
+      case PropertyStatus.pendingVerification:
+        return 'Pending';
+      case PropertyStatus.approved:
+        return 'Approved';
+      case PropertyStatus.rejected:
+        return 'Rejected';
+      case PropertyStatus.cancelled:
+        return 'Cancelled';
+    }
+  }
 }
 
 class Property {
@@ -16,14 +34,11 @@ class Property {
   final String propertyName;
   final PropertyType propertyType;
   final String propertyAddress;
-  final String ownerName;
-  final String contactNumber;
+  final String city;
   final double latitude;
   final double longitude;
-  final List<String> documentUrls;
-  final List<String> propertyImages;
+  final String? propertyPhoto;
   final PropertyStatus status;
-  final String? rejectionReason;
   final String ownerId;
   final String? assignedCoordinatorId;
   final DateTime createdAt;
@@ -34,14 +49,11 @@ class Property {
     required this.propertyName,
     required this.propertyType,
     required this.propertyAddress,
-    required this.ownerName,
-    required this.contactNumber,
+    this.city = '',
     required this.latitude,
     required this.longitude,
-    this.documentUrls = const [],
-    this.propertyImages = const [],
-    this.status = PropertyStatus.pendingVerification,
-    this.rejectionReason,
+    this.propertyPhoto,
+    this.status = PropertyStatus.propertyAdded,
     required this.ownerId,
     this.assignedCoordinatorId,
     required this.createdAt,
@@ -50,51 +62,47 @@ class Property {
 
   factory Property.fromJson(Map<String, dynamic> json) {
     return Property(
-      id: json['id'] as String,
-      propertyName: json['propertyName'] as String,
+      id: json['id']?.toString() ?? '',
+      propertyName: json['property_name'] ?? json['propertyName'] ?? '',
       propertyType: PropertyType.values.firstWhere(
-        (e) => e.toString().split('.').last == json['propertyType'],
+        (e) => e.toString().split('.').last == (json['property_type'] ?? json['propertyType']),
         orElse: () => PropertyType.land,
       ),
-      propertyAddress: json['propertyAddress'] as String,
-      ownerName: json['ownerName'] as String,
-      contactNumber: json['contactNumber'] as String,
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
-      documentUrls: List<String>.from(json['documentUrls'] as List? ?? []),
-      propertyImages: List<String>.from(json['propertyImages'] as List? ?? []),
+      propertyAddress: json['address'] ?? json['propertyAddress'] ?? '',
+      city: json['city'] ?? '',
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+      propertyPhoto: json['property_photo'] ?? json['propertyPhoto'],
       status: PropertyStatus.values.firstWhere(
         (e) => e.toString().split('.').last == json['status'],
-        orElse: () => PropertyStatus.pendingVerification,
+        orElse: () => PropertyStatus.propertyAdded,
       ),
-      rejectionReason: json['rejectionReason'] as String?,
-      ownerId: json['ownerId'] as String,
-      assignedCoordinatorId: json['assignedCoordinatorId'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'] as String)
-          : null,
+      ownerId: json['owner_id']?.toString() ?? json['ownerId']?.toString() ?? '',
+      assignedCoordinatorId: json['assigned_coordinator_id']?.toString() ?? json['assignedCoordinatorId']?.toString(),
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at']) 
+          : (json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now()),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : (json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'propertyName': propertyName,
-      'propertyType': propertyType.toString().split('.').last,
-      'propertyAddress': propertyAddress,
-      'ownerName': ownerName,
-      'contactNumber': contactNumber,
+      'property_name': propertyName,
+      'property_type': propertyType.toString().split('.').last,
+      'address': propertyAddress,
+      'city': city,
       'latitude': latitude,
       'longitude': longitude,
-      'documentUrls': documentUrls,
-      'propertyImages': propertyImages,
+      'property_photo': propertyPhoto,
       'status': status.toString().split('.').last,
-      'rejectionReason': rejectionReason,
-      'ownerId': ownerId,
-      'assignedCoordinatorId': assignedCoordinatorId,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
+      'owner_id': ownerId,
+      'assigned_coordinator_id': assignedCoordinatorId,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
 }

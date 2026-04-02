@@ -13,7 +13,7 @@ class TestimonialsScreen extends StatelessWidget {
       _Testimonial('Professional team, transparent process. Highly recommended.', 'Investor, Mumbai', 5),
     ];
 
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
@@ -81,7 +81,7 @@ class TestimonialsScreen extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }
 
