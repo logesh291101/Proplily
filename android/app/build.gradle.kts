@@ -7,8 +7,8 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
 // Optional: fallback version
-val flutterVersionCode = project.findProperty("flutter.versionCode")?.toString()?.toInt() ?: 2
-val flutterVersionName = project.findProperty("flutter.versionName")?.toString() ?: "1.0.2"
+//val flutterVersionCode = project.findProperty("flutter.versionCode")?.toString()?.toInt() ?: 2
+//val flutterVersionName = project.findProperty("flutter.versionName")?.toString() ?: "1.0.2"
 
 plugins {
     id("com.android.application")
