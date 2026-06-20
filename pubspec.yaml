@@ -3,7 +3,8 @@ description: "Property monitoring and management application"
 publish_to: 'none'
 
 #version: 1.0.0+1
-version: 1.0.3+4
+#version: 1.0.3+4
+version: 2.0.0+2
 environment:
   sdk: ^3.8.1
 
@@ -67,6 +68,8 @@ dependencies:
   uuid:
   url_launcher:
   package_info_plus: ^9.0.0
+  fluttertoast: ^9.0.0
+  country_state_city_picker: ^1.2.8
 
 dev_dependencies:
   flutter_test:
