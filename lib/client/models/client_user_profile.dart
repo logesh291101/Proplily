@@ -11,6 +11,7 @@ class UserProfile {
     required this.memberSince,
     required this.renewalDate,
     required this.activities,
+    this.profileImage,
   });
 
   final String name;
@@ -21,6 +22,13 @@ class UserProfile {
   final String memberSince;
   final String renewalDate;
   final List<ActivityItem> activities;
+  final String? profileImage;
+
+  String get avatarLetter {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed[0].toUpperCase();
+  }
 
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));

@@ -22,6 +22,7 @@ abstract final class FieldAgentProfileMapper {
       memberSince: _formatDate(data.createdAt),
       renewalDate: _renewalLabel(data),
       activities: _buildActivities(data),
+      profileImage: data.profileImage?.trim(),
     );
   }
 

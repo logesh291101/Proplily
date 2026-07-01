@@ -213,6 +213,181 @@ class PropertyService {
     return const PropertyUpdateSuccess();
   }
 
+  Future<PropertyUpdateResult> updateClientProperty({
+    required String propertyId,
+    required String propertyName,
+    required String address,
+    required String city,
+    required String latitude,
+    required String longitude,
+    required String plotType,
+    required String country,
+    required String state,
+    required String plotSize,
+    required String sizeUnit,
+    List<String> imagePaths = const [],
+    List<String> documentPaths = const [],
+  }) async {
+    final trimmedId = propertyId.trim();
+    if (trimmedId.isEmpty) {
+      return const PropertyUpdateFailure(message: 'Property ID is missing.');
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(AuthPreferenceKeys.token)?.trim() ?? '';
+
+    if (token.isEmpty) {
+      return const PropertyUpdateFailure(
+        message: 'Please sign in again.',
+      );
+    }
+
+    final base = await LiveUrlApi.getBaseUrl();
+    if (base == null) {
+      return const PropertyUpdateFailure(
+        message: 'Server URL is not configured. Please try again later.',
+      );
+    }
+
+    final uri = Uri.tryParse('$base/user/properties/update/$trimmedId');
+    if (uri == null || !uri.hasScheme) {
+      return const PropertyUpdateFailure(
+        message: 'Invalid server URL configuration.',
+      );
+    }
+
+    final ownsDio = _dio == null;
+    final dio = _dio ?? Dio();
+
+    try {
+      final imageParts = <MultipartFile>[];
+      for (final path in imagePaths) {
+        final file = File(path);
+        if (!await file.exists()) continue;
+        imageParts.add(
+          await MultipartFile.fromFile(
+            path,
+            filename: path.split(Platform.pathSeparator).last,
+          ),
+        );
+      }
+
+      final documentParts = <MultipartFile>[];
+      for (final path in documentPaths) {
+        final file = File(path);
+        if (!await file.exists()) continue;
+        documentParts.add(
+          await MultipartFile.fromFile(
+            path,
+            filename: path.split(Platform.pathSeparator).last,
+          ),
+        );
+      }
+
+      final formMap = <String, dynamic>{
+        'property_name': propertyName,
+        'address': address,
+        'city': city,
+        'latitude': latitude,
+        'longitude': longitude,
+        'plot_type': plotType,
+        'country': country,
+        'state': state,
+        'plot_size': plotSize,
+        'size_unit': sizeUnit,
+      };
+
+      if (imageParts.isNotEmpty) {
+        formMap['property_images[]'] = imageParts;
+      }
+      if (documentParts.isNotEmpty) {
+        formMap['plot_documents[]'] = documentParts;
+      }
+
+      final formData = FormData.fromMap(formMap);
+
+      final response = await dio.post<dynamic>(
+        uri.toString(),
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+          contentType: 'multipart/form-data',
+          validateStatus: (_) => true,
+        ),
+      );
+
+      final responseBody = _encodeResponseBody(response.data);
+
+      if (await ApiService.handleSessionExpiryIfNeeded(
+        statusCode: response.statusCode ?? 0,
+        body: responseBody,
+      )) {
+        return const PropertyUpdateFailure(
+          message: SessionExpiryHandler.message,
+        );
+      }
+
+      return _parseUpdateResponse(
+        statusCode: response.statusCode ?? 0,
+        body: responseBody,
+      );
+    } on DioException {
+      return const PropertyUpdateFailure(
+        message: 'Network error. Check your connection and try again.',
+      );
+    } catch (e) {
+      return PropertyUpdateFailure(
+        message: 'Something went wrong: $e',
+      );
+    } finally {
+      if (ownsDio) {
+        dio.close();
+      }
+    }
+  }
+
+  PropertyUpdateResult _parseUpdateResponse({
+    required int statusCode,
+    required String body,
+  }) {
+    final parsed = _tryParseJsonObject(body);
+    final apiMessage = _readStringLike(parsed?['message']) ??
+        _readErrorsText(parsed?['errors']);
+
+    if (parsed != null) {
+      final model = ClientPropertyRegistrationModel.fromJson(parsed);
+      final errorsText = _readErrorsText(model.errors);
+      final message = errorsText ?? model.message?.trim();
+
+      if (model.isSuccess) {
+        if (message != null && message.isNotEmpty) {
+          return PropertyUpdateSuccess(message: message);
+        }
+        return const PropertyUpdateSuccess();
+      } else if (message != null && message.isNotEmpty) {
+        return PropertyUpdateFailure(message: message);
+      }
+    }
+
+    if (statusCode == 200 || statusCode == 201) {
+      if (apiMessage != null && apiMessage.isNotEmpty) {
+        return PropertyUpdateSuccess(message: apiMessage);
+      }
+      return const PropertyUpdateSuccess();
+    }
+
+    if (apiMessage != null && apiMessage.isNotEmpty) {
+      return PropertyUpdateFailure(message: apiMessage);
+    }
+
+    return PropertyUpdateFailure(
+      message: body.trim().isNotEmpty ? body.trim() : 'Request failed.',
+    );
+  }
+
   PropertyRegistrationResult _parseRegistrationResponse({
     required int statusCode,
     required String body,

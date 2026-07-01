@@ -8,6 +8,7 @@ import 'package:proplilly/client/screens/client_billing_screen.dart';
 import 'package:proplilly/auth/login_screen.dart';
 import 'package:proplilly/client/providers/client_home_properties_provider.dart';
 import 'package:proplilly/client/providers/client_home_ads_provider.dart';
+import 'package:proplilly/client/providers/client_home_market_headlines_provider.dart';
 import 'package:proplilly/client/providers/client_home_dashboard_provider.dart';
 import 'package:proplilly/client/providers/client_notification_provider.dart';
 import 'package:proplilly/client/screens/client_referral_screen.dart';
@@ -45,6 +46,9 @@ class _HomePageState extends State<HomePage> {
         ),
         ChangeNotifierProvider(
           create: (_) => ClientHomeAdsProvider()..loadAds(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => ClientHomeMarketHeadlinesProvider()..loadHeadlines(),
         ),
       ],
       child: const _HomePageView(),
@@ -93,6 +97,7 @@ class _HomePageViewState extends State<_HomePageView> {
       context.read<HomeDashboardProvider>().refresh(),
       context.read<ClientHomePropertiesProvider>().refresh(),
       context.read<ClientHomeAdsProvider>().refresh(),
+      context.read<ClientHomeMarketHeadlinesProvider>().refresh(),
     ]);
   }
 

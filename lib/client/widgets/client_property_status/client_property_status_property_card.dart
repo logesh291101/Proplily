@@ -109,24 +109,24 @@ class PropertyStatusPropertyCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            typeLabel,
-            style: theme.titleSmall?.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          // Text(
+          //   typeLabel,
+          //   style: theme.titleSmall?.copyWith(
+          //     color: AppColors.textSecondary,
+          //     fontWeight: FontWeight.w600,
+          //   ),
+          // ),
           if (locationLine.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            //const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.location_on_outlined,
-                  size: 20,
-                  color: AppColors.primaryDark.withValues(alpha: 0.85),
-                ),
-                const SizedBox(width: 8),
+                // Icon(
+                //   Icons.location_on_outlined,
+                //   size: 20,
+                //   color: AppColors.primaryDark.withValues(alpha: 0.85),
+                // ),
+                //const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     locationLine,
@@ -147,13 +147,13 @@ class PropertyStatusPropertyCard extends StatelessWidget {
             color: monitoringColor,
             isPositive: _isPositiveStatus(monitoringStatus),
           ),
-          const SizedBox(height: 12),
-          _StatusRow(
-            label: 'Authorization',
-            chipLabel: authorizationLabel,
-            color: authorizationColor,
-            isPositive: _isPositiveStatus(authorizationStatus),
-          ),
+          // const SizedBox(height: 12),
+          // _StatusRow(
+          //   label: 'Authorization',
+          //   chipLabel: authorizationLabel,
+          //   color: authorizationColor,
+          //   isPositive: _isPositiveStatus(authorizationStatus),
+          // ),
           // const SizedBox(height: 20),
           // PremiumOutlineButton(
           //   label: 'Edit Property',

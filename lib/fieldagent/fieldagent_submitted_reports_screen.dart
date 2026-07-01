@@ -99,7 +99,7 @@ class _FieldAgentSubmittedReportsScreenState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 12),
+            padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 8),
             child: _ReportFilterBar(
               selectedFilter: _selectedFilter,
               onFilterSelected: (filter) {
@@ -156,23 +156,43 @@ class _FieldAgentSubmittedReportsScreenState
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadReports,
-      color: AppColors.primary,
-      child: ListView.separated(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(horizontal, 0, horizontal, 8),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '${reports.length} ${reports.length == 1 ? 'report' : 'reports'}',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
         ),
-        padding: EdgeInsets.fromLTRB(horizontal, 4, horizontal, 32),
-        itemCount: reports.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 14),
-        itemBuilder: (context, index) {
-          return _SubmittedReportCard(
-            report: reports[index],
-            onViewDetails: () => _openDetails(reports[index]),
-          );
-        },
-      ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadReports,
+            color: AppColors.primary,
+            child: ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: EdgeInsets.fromLTRB(horizontal, 0, horizontal, 32),
+              itemCount: reports.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 14),
+              itemBuilder: (context, index) {
+                return _SubmittedReportCard(
+                  report: reports[index],
+                  onViewDetails: () => _openDetails(reports[index]),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -188,20 +208,28 @@ class _ReportFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: SubmittedReportFilter.values.map((filter) {
-        final isSelected = filter == selectedFilter;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Material(
+    final theme = Theme.of(context).textTheme;
+
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: SubmittedReportFilter.values.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final filter = SubmittedReportFilter.values[index];
+          final isSelected = filter == selectedFilter;
+
+          return Material(
             color: isSelected ? AppColors.primary : AppColors.white,
             borderRadius: BorderRadius.circular(12),
             child: InkWell(
               onTap: () => onFilterSelected(filter),
               borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Ink(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
@@ -210,21 +238,23 @@ class _ReportFilterBar extends StatelessWidget {
                         : AppColors.primaryLight.withValues(alpha: 0.35),
                   ),
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  filter.label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: isSelected
-                            ? AppColors.white
-                            : AppColors.primaryDark,
-                      ),
+                child: Center(
+                  child: Text(
+                    filter.label,
+                    style: theme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: isSelected
+                          ? AppColors.white
+                          : AppColors.primaryDark,
+                      height: 1.2,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        },
+      ),
     );
   }
 }

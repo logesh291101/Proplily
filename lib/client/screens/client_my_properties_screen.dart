@@ -2,7 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:proplilly/client/models/client_properties_model.dart';
 import 'package:proplilly/client/models/client_property_extensions.dart';
-import 'package:proplilly/client/screens/client_edit_property_screen.dart';
+import 'package:proplilly/client/screens/client_property_details_screen.dart';
 import 'package:proplilly/client/services/client_my_properties_service.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
@@ -25,7 +25,7 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
 
   bool _isLoading = true;
   String? _errorMessage;
-  List<ClientProperty> _loadedProperties = <ClientProperty>[];
+  List<ClientPropertyData> _loadedProperties = <ClientPropertyData>[];
 
   @override
   void initState() {
@@ -37,36 +37,38 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _loadedProperties = <ClientPropertyData>[];
     });
 
     final result = await _service.fetchProperties();
     if (!mounted) return;
 
     switch (result) {
-      case ClientPropertiesFetchSuccess(:final model):
+      case ClientPropertiesFetchSuccess(:final properties):
         setState(() {
           _isLoading = false;
-          _loadedProperties =
-              List<ClientProperty>.from(model.data ?? const []);
+          _loadedProperties = List<ClientPropertyData>.from(properties);
           _errorMessage = null;
         });
       case ClientPropertiesFetchFailure(:final message):
         setState(() {
           _isLoading = false;
-          _loadedProperties = <ClientProperty>[];
+          _loadedProperties = <ClientPropertyData>[];
           _errorMessage = message;
         });
     }
   }
 
-  void _openEditProperty(ClientProperty property) {
-    Navigator.of(context).push<bool>(
+  Future<void> _openPropertyDetails(ClientPropertyData propertyData) async {
+    final updated = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => EditPropertyScreen(
-          property: property.toEditPropertyItem(),
-        ),
+        builder: (_) => ClientPropertyDetailsScreen(propertyData: propertyData),
       ),
     );
+
+    if (updated == true && mounted) {
+      await _loadProperties();
+    }
   }
 
   @override
@@ -161,8 +163,8 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
             bottom: index < _loadedProperties.length - 1 ? 16 : 0,
           ),
           child: _MyPropertyCard(
-            property: property,
-            onEditDetails: () => _openEditProperty(property),
+            propertyData: property,
+            onTap: () => _openPropertyDetails(property),
           ),
         );
       },
@@ -172,109 +174,103 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
 
 class _MyPropertyCard extends StatelessWidget {
   const _MyPropertyCard({
-    required this.property,
-    required this.onEditDetails,
+    required this.propertyData,
+    required this.onTap,
   });
 
-  final ClientProperty property;
-  final VoidCallback onEditDetails;
+  final ClientPropertyData propertyData;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
-    final imageUrl = property.photoUrl;
+    final imageUrl = propertyData.photoUrl;
+    final details = propertyData.property;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: SizedBox(
-        height: 220,
-        width: double.infinity,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (imageUrl.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: imageUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => const _PropertyImagePlaceholder(),
-                errorWidget: (_, __, ___) => const _PropertyImagePlaceholder(),
-              )
-            else
-              const _PropertyImagePlaceholder(),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.15),
-                    Colors.black.withValues(alpha: 0.55),
-                    Colors.black.withValues(alpha: 0.82),
-                  ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: SizedBox(
+            height: 220,
+            width: double.infinity,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (imageUrl.isNotEmpty)
+                  CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => const _PropertyImagePlaceholder(),
+                    errorWidget: (_, __, ___) =>
+                        const _PropertyImagePlaceholder(),
+                  )
+                else
+                  const _PropertyImagePlaceholder(),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.15),
+                        Colors.black.withValues(alpha: 0.55),
+                        Colors.black.withValues(alpha: 0.82),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    (property.propertyName?.trim().isNotEmpty ?? false)
-                        ? property.propertyName!.trim()
-                        : '—',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.titleLarge?.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    property.displayPlotType != '—'
-                        ? property.displayPlotType.toUpperCase()
-                        : '—',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.titleSmall?.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
-                    ),
-                  ),
-                  const Spacer(),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _PropertyMetaLine(
-                              label: 'Status',
-                              value: property.monitoringStatus ?? '',
-                              theme: theme,
-                            ),
-                            const SizedBox(height: 8),
-                            _PropertyMetaLine(
-                              label: 'City',
-                              value: property.city ?? '',
-                              theme: theme,
-                            ),
-                          ],
+                      Text(
+                        details.propertyName.trim().isNotEmpty
+                            ? details.propertyName.trim()
+                            : '—',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.titleLarge?.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      _EditDetailsButton(onPressed: onEditDetails),
+                      const SizedBox(height: 4),
+                      Text(
+                        propertyData.displayPlotType != '—'
+                            ? propertyData.displayPlotType.toUpperCase()
+                            : '—',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.titleSmall?.copyWith(
+                          color: AppColors.white.withValues(alpha: 0.9),
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      const Spacer(),
+                      _PropertyMetaLine(
+                        label: 'Status',
+                        value: details.monitoringStatus,
+                        theme: theme,
+                      ),
+                      const SizedBox(height: 8),
+                      _PropertyMetaLine(
+                        label: 'City',
+                        value: details.city,
+                        theme: theme,
+                      ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -318,34 +314,6 @@ class _PropertyMetaLine extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _EditDetailsButton extends StatelessWidget {
-  const _EditDetailsButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Text(
-            'Edit Details',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: AppColors.primaryDark,
-                  fontWeight: FontWeight.w700,
-                ),
-          ),
-        ),
-      ),
     );
   }
 }

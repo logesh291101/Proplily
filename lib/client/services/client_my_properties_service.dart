@@ -13,9 +13,13 @@ sealed class ClientPropertiesFetchResult {
 }
 
 final class ClientPropertiesFetchSuccess extends ClientPropertiesFetchResult {
-  const ClientPropertiesFetchSuccess(this.model);
+  const ClientPropertiesFetchSuccess({
+    required this.properties,
+    this.message = '',
+  });
 
-  final ClientPropertiesModel model;
+  final List<ClientPropertyData> properties;
+  final String message;
 }
 
 final class ClientPropertiesFetchFailure extends ClientPropertiesFetchResult {
@@ -118,63 +122,37 @@ class ClientMyPropertiesService {
 
     final decoded = jsonDecode(trimmed);
 
-    final ClientPropertiesModel model;
     if (decoded is List) {
-      model = ClientPropertiesModel(
-        status: true,
-        message: '',
-        data: _parsePropertyList(decoded),
-        errors: null,
-      );
-    } else if (decoded is Map) {
-      model = ClientPropertiesModel.fromJson(
-        Map<String, dynamic>.from(decoded),
-      );
-    } else {
+      final properties = ClientPropertiesModel.parsePropertyDataList(decoded);
+      return ClientPropertiesFetchSuccess(properties: properties);
+    }
+
+    if (decoded is! Map) {
       return const ClientPropertiesFetchFailure(
         message: 'Invalid properties response.',
       );
     }
 
-    final apiError = _readErrorsText(model.errors);
+    final map = Map<String, dynamic>.from(decoded);
+    final apiError = _readErrorsText(map['errors']);
     if (apiError != null) {
       return ClientPropertiesFetchFailure(message: apiError);
     }
 
-    if (model.status != true) {
-      final msg = model.message?.trim() ?? '';
+    final status = map['status'] == true;
+    final message = map['message']?.toString().trim() ?? '';
+
+    if (!status) {
       return ClientPropertiesFetchFailure(
-        message: msg.isNotEmpty ? msg : 'Could not load properties.',
+        message: message.isNotEmpty ? message : 'Could not load properties.',
       );
     }
 
-    return ClientPropertiesFetchSuccess(model);
-  }
-
-  static List<ClientProperty> _parsePropertyList(dynamic raw) {
-    if (raw == null) return [];
-
-    if (raw is List) {
-      return raw
-          .map(_mapFromDynamic)
-          .whereType<Map<String, dynamic>>()
-          .map(ClientProperty.fromJson)
-          .toList();
-    }
-
-    if (raw is Map) {
-      final map = _mapFromDynamic(raw);
-      if (map == null) return [];
-      return [ClientProperty.fromJson(map)];
-    }
-
-    return [];
-  }
-
-  static Map<String, dynamic>? _mapFromDynamic(dynamic raw) {
-    if (raw is Map<String, dynamic>) return raw;
-    if (raw is Map) return Map<String, dynamic>.from(raw);
-    return null;
+    final properties = ClientPropertiesModel.parsePropertyDataList(map['data']);
+    return ClientPropertiesFetchSuccess(
+      properties: properties,
+      message: message,
+    );
   }
 
   String _messageForStatus(int statusCode, String body) {

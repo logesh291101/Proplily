@@ -2,9 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
 
-/// Gradient hero banner for [AddPropertyScreen].
+/// Gradient hero banner for property registration and update screens.
 class AddPropertyHeroSection extends StatelessWidget {
-  const AddPropertyHeroSection({super.key});
+  const AddPropertyHeroSection({
+    super.key,
+    this.title = 'Register New Property',
+    this.subtitle =
+        'Add your asset to the PropLilly monitoring ecosystem.',
+    this.icon = Icons.add_home_work_rounded,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +77,8 @@ class AddPropertyHeroSection extends StatelessWidget {
                         width: 64,
                         height: 64,
                         decoration: PremiumDecorations.frostedCircle,
-                        child: const Icon(
-                          Icons.add_home_work_rounded,
+                        child: Icon(
+                          icon,
                           color: AppColors.white,
                           size: 32,
                         ),
@@ -79,7 +89,7 @@ class AddPropertyHeroSection extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Register New Property',
+                              title,
                               style: theme.headlineSmall?.copyWith(
                                 color: AppColors.white,
                                 fontWeight: FontWeight.w800,
@@ -88,8 +98,7 @@ class AddPropertyHeroSection extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Add your asset to the PropLilly monitoring '
-                              'ecosystem.',
+                              subtitle,
                               style: theme.bodyMedium?.copyWith(
                                 color: AppColors.white.withValues(alpha: 0.9),
                                 height: 1.4,

@@ -9,4 +9,12 @@ class SizeUnits {
     'cent',
     'ground',
   ];
+
+  static List<String> withSavedValue(String? saved) {
+    final trimmed = saved?.trim();
+    if (trimmed == null || trimmed.isEmpty || all.contains(trimmed)) {
+      return all;
+    }
+    return [...all, trimmed];
+  }
 }

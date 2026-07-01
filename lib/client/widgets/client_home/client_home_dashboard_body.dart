@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:proplilly/client/screens/client_add_property_screen.dart';
 import 'package:proplilly/client/models/client_home_dashboard.dart';
 import 'package:proplilly/client/providers/client_home_ads_provider.dart';
+import 'package:proplilly/client/widgets/client_home/client_home_market_headlines_section.dart';
 import 'package:proplilly/client/theme/screen_spacing.dart';
 import 'package:proplilly/client/widgets/client_home/client_home_account_card.dart';
 import 'package:proplilly/client/widgets/client_home/client_home_action_tile.dart';
@@ -73,6 +74,7 @@ class HomeDashboardBody extends StatelessWidget {
                   Navigator.push(context, MaterialPageRoute(builder: (context) => AddPropertyScreen()));
                 },
           ),
+          const ClientHomeMarketHeadlinesSection(),
           const SizedBox(height: 28),
           // const HomeSectionTitle(
           //   title: 'Security & Documents',

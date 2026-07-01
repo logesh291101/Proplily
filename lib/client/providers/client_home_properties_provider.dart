@@ -11,12 +11,12 @@ class ClientHomePropertiesProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   String? _errorMessage;
-  List<ClientProperty> _loadedProperties = <ClientProperty>[];
+  List<ClientPropertyData> _loadedProperties = <ClientPropertyData>[];
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  List<ClientProperty> get properties =>
-      List<ClientProperty>.unmodifiable(_loadedProperties);
+  List<ClientPropertyData> get properties =>
+      List<ClientPropertyData>.unmodifiable(_loadedProperties);
   bool get hasData => _loadedProperties.isNotEmpty;
 
   Future<void> loadProperties() async {
@@ -24,17 +24,18 @@ class ClientHomePropertiesProvider extends ChangeNotifier {
 
     _isLoading = true;
     _errorMessage = null;
+    _loadedProperties = <ClientPropertyData>[];
     notifyListeners();
 
     final result = await _service.fetchProperties();
     _isLoading = false;
 
     switch (result) {
-      case ClientPropertiesFetchSuccess(:final model):
-        _loadedProperties = List<ClientProperty>.from(model.data ?? const []);
+      case ClientPropertiesFetchSuccess(:final properties):
+        _loadedProperties = List<ClientPropertyData>.from(properties);
         _errorMessage = null;
       case ClientPropertiesFetchFailure(:final message):
-        _loadedProperties = <ClientProperty>[];
+        _loadedProperties = <ClientPropertyData>[];
         _errorMessage = message;
     }
 

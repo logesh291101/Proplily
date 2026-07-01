@@ -117,7 +117,8 @@ class ProfileHeroSection extends StatelessWidget {
             bottom: 0,
             child: Center(
               child: _ProfileAvatar(
-                initials: profile.initials,
+                profileImage: profile.profileImage,
+                avatarLetter: profile.avatarLetter,
                 onEdit: onEditAvatar,
               ),
             ),
@@ -128,18 +129,44 @@ class ProfileHeroSection extends StatelessWidget {
   }
 }
 
-class _ProfileAvatar extends StatelessWidget {
+class _ProfileAvatar extends StatefulWidget {
   const _ProfileAvatar({
-    required this.initials,
+    required this.avatarLetter,
+    this.profileImage,
     this.onEdit,
   });
 
-  final String initials;
+  final String avatarLetter;
+  final String? profileImage;
   final VoidCallback? onEdit;
+
+  @override
+  State<_ProfileAvatar> createState() => _ProfileAvatarState();
+}
+
+class _ProfileAvatarState extends State<_ProfileAvatar> {
+  bool _imageFailed = false;
+
+  @override
+  void didUpdateWidget(covariant _ProfileAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.profileImage != widget.profileImage) {
+      _imageFailed = false;
+    }
+  }
+
+  bool get _hasValidImageUrl {
+    if (_imageFailed) return false;
+    final url = widget.profileImage?.trim();
+    if (url == null || url.isEmpty) return false;
+    final uri = Uri.tryParse(url);
+    return uri != null && uri.hasScheme;
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
+    final imageUrl = widget.profileImage?.trim();
 
     return Stack(
       clipBehavior: Clip.none,
@@ -160,13 +187,23 @@ class _ProfileAvatar extends StatelessWidget {
           child: CircleAvatar(
             radius: 52,
             backgroundColor: AppColors.primary,
-            child: Text(
-              initials,
-              style: theme.headlineMedium?.copyWith(
-                color: AppColors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
+            backgroundImage: _hasValidImageUrl
+                ? NetworkImage(imageUrl!)
+                : null,
+            onBackgroundImageError: (_, __) {
+              if (mounted) {
+                setState(() => _imageFailed = true);
+              }
+            },
+            child: _hasValidImageUrl
+                ? null
+                : Text(
+                    widget.avatarLetter,
+                    style: theme.headlineMedium?.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
           ),
         ),
         // Positioned(

@@ -3,52 +3,84 @@ import 'dart:convert';
 import 'package:proplilly/client/models/client_properties_model.dart';
 import 'package:proplilly/client/models/client_property_status_model.dart';
 
-extension ClientPropertyUi on ClientProperty {
-  String get photoUrl => _resolvePhotoUrl(propertyPhoto);
+extension ClientPropertyDataUi on ClientPropertyData {
+  Property get details => property;
+
+  String get photoUrl {
+    final urls = imageUrls;
+    return urls.isNotEmpty ? urls.first : '';
+  }
+
+  List<String> get imageUrls {
+    final primaryFirst = [...images]
+      ..sort((a, b) {
+        final aPrimary = a.isPrimary.trim() == '1' || a.isPrimary.toLowerCase() == 'true';
+        final bPrimary = b.isPrimary.trim() == '1' || b.isPrimary.toLowerCase() == 'true';
+        if (aPrimary == bPrimary) return 0;
+        return aPrimary ? -1 : 1;
+      });
+
+    final paths = primaryFirst
+        .map((image) => image.imagePath.trim())
+        .where((path) => path.isNotEmpty)
+        .toList();
+
+    if (paths.isNotEmpty) return paths;
+
+    return ClientPropertyMediaParser.parseUrls(property.propertyPhoto);
+  }
+
+  List<String> get documentUrls =>
+      ClientPropertyMediaParser.parseUrls(property.plotDocuments);
+
+  String displayValue(String raw) {
+    final trimmed = raw.trim();
+    return trimmed.isNotEmpty ? trimmed : '—';
+  }
 
   String get displayStatus {
-    final monitoring = _trim(monitoringStatus);
+    final monitoring = property.monitoringStatus.trim();
     if (monitoring.isNotEmpty) return monitoring;
-    final authorization = _trim(authorizationStatus);
+    final authorization = property.authorizationStatus?.trim() ?? '';
     if (authorization.isNotEmpty) return authorization;
     return '—';
   }
 
   String get displayLocation {
-    final cityText = _trim(city);
-    final stateText = _trim(state);
+    final cityText = property.city.trim();
+    final stateText = property.state.trim();
     if (cityText.isNotEmpty && stateText.isNotEmpty) {
       return '$cityText, $stateText';
     }
     if (cityText.isNotEmpty) return cityText;
     if (stateText.isNotEmpty) return stateText;
-    final addressText = _trim(address);
+    final addressText = property.address.trim();
     return addressText.isNotEmpty ? addressText : '—';
   }
 
   String get displayArea {
-    final size = _trim(plotSize);
+    final size = property.plotSize.trim();
     if (size.isEmpty) return '—';
-    final unit = _trim(sizeUnit);
+    final unit = property.sizeUnit.trim();
     return unit.isNotEmpty ? '$size $unit' : size;
   }
 
   String get displayPlotType {
-    final plot = _trim(plotType);
+    final plot = property.plotType.trim();
     if (plot.isNotEmpty) return plot;
-    final type = _trim(propertyType);
+    final type = property.propertyType.trim();
     return type.isNotEmpty ? type : '—';
   }
 
   bool get hasMapCoordinates {
-    final lat = _trim(latitude);
-    final lng = _trim(longitude);
+    final lat = property.latitude.trim();
+    final lng = property.longitude.trim();
     if (lat.isEmpty || lng.isEmpty) return false;
     return double.tryParse(lat) != null && double.tryParse(lng) != null;
   }
 
   String get verifiedDaysAgoLabel {
-    final date = _parseDate(verifiedAt) ?? _parseDate(updatedAt);
+    final date = _parseDate(property.verifiedAt) ?? _parseDate(property.updatedAt);
     if (date == null) return 'Last verified: —';
     final days = DateTime.now().difference(date).inDays;
     if (days <= 0) return 'Last verified: today';
@@ -57,60 +89,31 @@ extension ClientPropertyUi on ClientProperty {
   }
 
   String get formattedUpdatedAt {
-    final date = _parseDate(updatedAt);
+    final date = _parseDate(property.updatedAt);
     if (date == null) return '—';
     return _formatDate(date);
   }
 
   ClientPropertyStatusItem toEditPropertyItem() {
     return ClientPropertyStatusItem(
-      propertyId: _trim(propertyId),
-      propertyName: _trim(propertyName),
-      propertyType: _trim(plotType).isNotEmpty
-          ? _trim(plotType)
-          : _trim(propertyType),
-      address: _trim(address),
-      city: _trim(city),
+      propertyId: property.propertyId.trim(),
+      propertyName: property.propertyName.trim(),
+      propertyType: property.plotType.trim().isNotEmpty
+          ? property.plotType.trim()
+          : property.propertyType.trim(),
+      address: property.address.trim(),
+      city: property.city.trim(),
       country: '',
-      state: _trim(state),
-      plotSize: _trim(plotSize),
-      latitude: _trim(latitude),
-      longitude: _trim(longitude),
+      state: property.state.trim(),
+      plotSize: property.plotSize.trim(),
+      latitude: property.latitude.trim(),
+      longitude: property.longitude.trim(),
       ownerName: '',
       ownerPhone: '',
-      monitoringStatus: _trim(monitoringStatus),
-      authorizationStatus: _trim(authorizationStatus),
-      createdAt: _trim(createdAt),
+      monitoringStatus: property.monitoringStatus.trim(),
+      authorizationStatus: property.authorizationStatus?.trim() ?? '',
+      createdAt: property.createdAt.trim(),
     );
-  }
-
-  static String _trim(String? value) => value?.trim() ?? '';
-
-  static String _resolvePhotoUrl(String? raw) {
-    final trimmed = raw?.trim() ?? '';
-    if (trimmed.isEmpty) return '';
-
-    if (trimmed.startsWith('[')) {
-      try {
-        final decoded = jsonDecode(trimmed);
-        if (decoded is List && decoded.isNotEmpty) {
-          final first = decoded.first;
-          if (first is String && first.trim().isNotEmpty) {
-            return first.trim();
-          }
-          if (first is Map) {
-            final url = first['url'] ?? first['image'] ?? first['path'];
-            if (url is String && url.trim().isNotEmpty) {
-              return url.trim();
-            }
-          }
-        }
-      } catch (_) {
-        return trimmed;
-      }
-    }
-
-    return trimmed;
   }
 
   static DateTime? _parseDate(String? raw) {
@@ -123,5 +126,53 @@ extension ClientPropertyUi on ClientProperty {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     return '$day/$month/${date.year}';
+  }
+}
+
+class ClientPropertyMediaParser {
+  ClientPropertyMediaParser._();
+
+  static List<String> parseUrls(String? raw) {
+    if (raw == null) return [];
+
+    final urls = <String>[];
+
+    void addUrl(String? value) {
+      final trimmed = value?.trim();
+      if (trimmed != null && trimmed.isNotEmpty && !urls.contains(trimmed)) {
+        urls.add(trimmed);
+      }
+    }
+
+    try {
+      if (raw.trim().startsWith('[')) {
+        final decoded = jsonDecode(raw);
+        if (decoded is List) {
+          for (final item in decoded) {
+            if (item is Map) {
+              addUrl(
+                item['url']?.toString() ??
+                    item['image']?.toString() ??
+                    item['path']?.toString() ??
+                    item['image_path']?.toString() ??
+                    item['name']?.toString(),
+              );
+            } else {
+              addUrl(item?.toString());
+            }
+          }
+        }
+      } else if (raw.contains(',')) {
+        for (final part in raw.split(',')) {
+          addUrl(part);
+        }
+      } else {
+        addUrl(raw);
+      }
+    } catch (_) {
+      addUrl(raw);
+    }
+
+    return urls;
   }
 }
