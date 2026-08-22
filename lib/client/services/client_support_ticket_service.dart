@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:http/http.dart' as http;
 import 'package:proplilly/auth/auth_preferences.dart';
@@ -69,7 +70,7 @@ class ClientSupportTicketService {
           'message': message,
         }),
       );
-
+      log("------------------------$subject,$category,$message");
       if (await ApiService.handleSessionExpiryIfNeeded(
         statusCode: response.statusCode,
         body: response.body,
@@ -147,12 +148,13 @@ class ClientSupportTicketService {
     if (rawErrors == null) return null;
 
     if (rawErrors is Map) {
-      final map = Map<String, dynamic>.from(rawErrors);
-      for (final v in map.values) {
+      final parts = <String>[];
+      for (final v in Map<String, dynamic>.from(rawErrors).values) {
         final text = _readStringLike(v);
-        if (text != null) return text;
+        if (text != null) parts.add(text);
       }
-      return null;
+      if (parts.isEmpty) return null;
+      return parts.join('\n');
     }
 
     return _readStringLike(rawErrors);
@@ -169,7 +171,13 @@ class ClientSupportTicketService {
       return t.isEmpty ? null : t;
     }
     if (raw is List && raw.isNotEmpty) {
-      return _readStringLike(raw.first);
+      final parts = <String>[];
+      for (final item in raw) {
+        final text = _readStringLike(item);
+        if (text != null) parts.add(text);
+      }
+      if (parts.isEmpty) return null;
+      return parts.join('\n');
     }
     return null;
   }

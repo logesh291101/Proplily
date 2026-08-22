@@ -25,6 +25,7 @@ class FieldAgentDrawer extends StatelessWidget {
     (label: 'Referrals', icon: Icons.people_alt_outlined),
     (label: 'Profile', icon: Icons.person_outline_rounded),
     (label: 'Raise Support Ticket', icon: Icons.support_agent_outlined),
+    (label: 'Your Tickets', icon: Icons.confirmation_number_outlined),
   ];
 
   static const double _menuIconSize = 22;

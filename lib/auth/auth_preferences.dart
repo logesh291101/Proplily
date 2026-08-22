@@ -4,7 +4,6 @@ abstract final class AuthPreferenceKeys {
   static const String userId = 'user_id';
   static const String email = 'email';
   static const String role = 'role';
-  static const String userType = 'user_type';
   static const String name = 'name';
 
   static const String phone = 'phone';
@@ -19,7 +18,6 @@ abstract final class AuthPreferenceKeys {
     userId,
     email,
     role,
-    userType,
     name,
   ];
 
@@ -32,5 +30,7 @@ abstract final class AuthPreferenceKeys {
     memberSince,
     renewalDate,
     'jwt',
+    // Legacy key — no longer written; cleared so old sessions do not retain it.
+    'user_type',
   ];
 }

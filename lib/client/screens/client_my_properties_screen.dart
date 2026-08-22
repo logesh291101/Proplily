@@ -1,6 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:proplilly/client/models/client_properties_model.dart';
+import 'package:proplilly/client/models/client_properties_list_model.dart';
 import 'package:proplilly/client/models/client_property_extensions.dart';
 import 'package:proplilly/client/screens/client_property_details_screen.dart';
 import 'package:proplilly/client/services/client_my_properties_service.dart';
@@ -25,7 +25,7 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
 
   bool _isLoading = true;
   String? _errorMessage;
-  List<ClientPropertyData> _loadedProperties = <ClientPropertyData>[];
+  List<ClientProperty> _loadedProperties = <ClientProperty>[];
 
   @override
   void initState() {
@@ -37,7 +37,7 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _loadedProperties = <ClientPropertyData>[];
+      _loadedProperties = <ClientProperty>[];
     });
 
     final result = await _service.fetchProperties();
@@ -47,22 +47,25 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
       case ClientPropertiesFetchSuccess(:final properties):
         setState(() {
           _isLoading = false;
-          _loadedProperties = List<ClientPropertyData>.from(properties);
+          _loadedProperties = List<ClientProperty>.from(properties);
           _errorMessage = null;
         });
       case ClientPropertiesFetchFailure(:final message):
         setState(() {
           _isLoading = false;
-          _loadedProperties = <ClientPropertyData>[];
+          _loadedProperties = <ClientProperty>[];
           _errorMessage = message;
         });
     }
   }
 
-  Future<void> _openPropertyDetails(ClientPropertyData propertyData) async {
+  Future<void> _openPropertyDetails(ClientProperty property) async {
+    final propertyId = property.propertyId.trim();
+    if (propertyId.isEmpty) return;
+
     final updated = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => ClientPropertyDetailsScreen(propertyData: propertyData),
+        builder: (_) => ClientPropertyDetailsScreen(propertyId: propertyId),
       ),
     );
 
@@ -78,7 +81,7 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('My Properties'),
+        //title: const Text('My Properties'),
         actions: ProplillyAppBar.clientActions(),
       ),
       body: Column(
@@ -163,7 +166,7 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
             bottom: index < _loadedProperties.length - 1 ? 16 : 0,
           ),
           child: _MyPropertyCard(
-            propertyData: property,
+            property: property,
             onTap: () => _openPropertyDetails(property),
           ),
         );
@@ -174,18 +177,17 @@ class _ClientMyPropertiesScreenState extends State<ClientMyPropertiesScreen> {
 
 class _MyPropertyCard extends StatelessWidget {
   const _MyPropertyCard({
-    required this.propertyData,
+    required this.property,
     required this.onTap,
   });
 
-  final ClientPropertyData propertyData;
+  final ClientProperty property;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
-    final imageUrl = propertyData.photoUrl;
-    final details = propertyData.property;
+    final imageUrl = property.photoUrl;
 
     return Material(
       color: Colors.transparent,
@@ -229,8 +231,8 @@ class _MyPropertyCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        details.propertyName.trim().isNotEmpty
-                            ? details.propertyName.trim()
+                        property.propertyName.trim().isNotEmpty
+                            ? property.propertyName.trim()
                             : '—',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -242,8 +244,8 @@ class _MyPropertyCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        propertyData.displayPlotType != '—'
-                            ? propertyData.displayPlotType.toUpperCase()
+                        property.displayPlotType != '—'
+                            ? property.displayPlotType.toUpperCase()
                             : '—',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -256,13 +258,13 @@ class _MyPropertyCard extends StatelessWidget {
                       const Spacer(),
                       _PropertyMetaLine(
                         label: 'Status',
-                        value: details.monitoringStatus,
+                        value: property.monitoringStatus,
                         theme: theme,
                       ),
                       const SizedBox(height: 8),
                       _PropertyMetaLine(
                         label: 'City',
-                        value: details.city,
+                        value: property.city,
                         theme: theme,
                       ),
                     ],

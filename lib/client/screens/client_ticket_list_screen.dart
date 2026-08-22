@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:proplilly/client/models/client_ticket_extensions.dart';
-import 'package:proplilly/client/models/client_tickets_model.dart';
+import 'package:proplilly/client/models/client_support_ticket_model.dart';
 import 'package:proplilly/client/providers/client_ticket_list_provider.dart';
 import 'package:proplilly/client/screens/client_ticket_detail_screen.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
@@ -13,34 +13,45 @@ import 'package:proplilly/client/widgets/proplilly_app_bar_logo_action.dart';
 import 'package:proplilly/client/widgets/ui/proplilly_screen_hero_section.dart';
 
 class TicketListScreen extends StatelessWidget {
-  const TicketListScreen({super.key});
+  const TicketListScreen({
+    super.key,
+    this.clientModule = true,
+  });
+
+  /// When false, uses Field Agent app-bar actions (logo only).
+  final bool clientModule;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => TicketListProvider()..loadTickets(),
-      child: const _TicketListView(),
+      child: _TicketListView(clientModule: clientModule),
     );
   }
 }
 
 class _TicketListView extends StatelessWidget {
-  const _TicketListView();
+  const _TicketListView({required this.clientModule});
+
+  final bool clientModule;
 
   Future<void> _refresh(BuildContext context) async {
     await context.read<TicketListProvider>().refresh();
   }
 
-  void _openTicketDetail(BuildContext context, ClientTicketData ticket) {
-    final ticketId = ticket.id?.trim();
-    if (ticketId == null || ticketId.isEmpty) return;
+  void _openTicketDetail(BuildContext context, ClientSupportTicket ticket) {
+    final ticketId = ticket.id.trim();
+    if (ticketId.isEmpty) return;
 
     final provider = context.read<TicketListProvider>();
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ChangeNotifierProvider<TicketListProvider>.value(
           value: provider,
-          child: TicketDetailScreen(ticketId: ticketId),
+          child: TicketDetailScreen(
+            ticketId: ticketId,
+            clientModule: clientModule,
+          ),
         ),
       ),
     );
@@ -53,8 +64,10 @@ class _TicketListView extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Your Tickets'),
-        actions: ProplillyAppBar.clientActions(),
+       // title: const Text('Your Tickets'),
+        actions: clientModule
+            ? ProplillyAppBar.clientActions()
+            : ProplillyAppBar.logoActions(),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -167,7 +180,7 @@ class _TicketListTile extends StatelessWidget {
     required this.onViewDetails,
   });
 
-  final ClientTicketData ticket;
+  final ClientSupportTicket ticket;
   final VoidCallback onViewDetails;
 
   @override
@@ -196,7 +209,7 @@ class _TicketListTile extends StatelessWidget {
           ),
         const SizedBox(height: 8),
           Text(
-            ticket.message ?? "",
+            ticket.displayMessage,
             style: theme.titleMedium?.copyWith(
               fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,

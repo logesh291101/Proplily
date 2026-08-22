@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:proplilly/auth/auth_preferences.dart';
 import 'package:proplilly/auth/session_expiry_handler.dart';
-import 'package:proplilly/client/models/client_tickets_model.dart';
+import 'package:proplilly/client/models/client_support_ticket_model.dart';
 import 'package:proplilly/client/services/client_live_url_api.dart';
 import 'package:proplilly/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,7 +15,7 @@ sealed class TicketListFetchResult {
 final class TicketListFetchSuccess extends TicketListFetchResult {
   const TicketListFetchSuccess(this.model);
 
-  final ClientTicketsModel model;
+  final ClientSupportTicketModel model;
 }
 
 final class TicketListFetchFailure extends TicketListFetchResult {
@@ -117,17 +117,17 @@ class TicketListService {
     }
 
     final decoded = jsonDecode(trimmed);
-    final ClientTicketsModel model;
+    final ClientSupportTicketModel model;
 
     if (decoded is List) {
-      model = ClientTicketsModel(
+      model = ClientSupportTicketModel(
         status: true,
         message: '',
         data: _parseTicketList(decoded),
         errors: null,
       );
     } else if (decoded is Map) {
-      model = ClientTicketsModel.fromJson(
+      model = ClientSupportTicketModel.fromJson(
         Map<String, dynamic>.from(decoded),
       );
     } else {
@@ -141,8 +141,8 @@ class TicketListService {
       return TicketListFetchFailure(message: apiError);
     }
 
-    if (model.status != true) {
-      final msg = model.message?.trim() ?? '';
+    if (!model.status) {
+      final msg = model.message.trim();
       return TicketListFetchFailure(
         message: msg.isNotEmpty ? msg : 'Could not load tickets.',
       );
@@ -151,18 +151,18 @@ class TicketListService {
     return TicketListFetchSuccess(model);
   }
 
-  static List<ClientTicketData> _parseTicketList(dynamic raw) {
+  static List<ClientSupportTicket> _parseTicketList(dynamic raw) {
     if (raw == null) return [];
 
     if (raw is List) {
       return raw
           .whereType<Map>()
-          .map((e) => ClientTicketData.fromJson(Map<String, dynamic>.from(e)))
+          .map((e) => ClientSupportTicket.fromJson(Map<String, dynamic>.from(e)))
           .toList();
     }
 
     if (raw is Map) {
-      return [ClientTicketData.fromJson(Map<String, dynamic>.from(raw))];
+      return [ClientSupportTicket.fromJson(Map<String, dynamic>.from(raw))];
     }
 
     return [];

@@ -31,9 +31,7 @@ class _FieldAgentHomeHeroSectionState extends State<FieldAgentHomeHeroSection> {
   Future<void> _loadFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
     final name = prefs.getString(AuthPreferenceKeys.name)?.trim() ?? '';
-    final role = prefs.getString(AuthPreferenceKeys.role)?.trim() ??
-        prefs.getString(AuthPreferenceKeys.userType)?.trim() ??
-        '';
+    final role = prefs.getString(AuthPreferenceKeys.role)?.trim() ?? '';
 
     if (!mounted) return;
     setState(() {

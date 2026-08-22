@@ -107,8 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final buttonHeight = (screenHeight * 0.07).clamp(48.0, 58.0);
     final textTheme = Theme.of(context).textTheme;
 
-    return SafeArea(
-      child: Scaffold(
+    return Scaffold(
         body: SingleChildScrollView(
           child: Column(
             children: [
@@ -347,7 +346,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 }

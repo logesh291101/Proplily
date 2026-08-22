@@ -1,30 +1,25 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:proplilly/client/models/client_properties_model.dart';
+import 'package:proplilly/client/models/client_properties_detail_model.dart';
 import 'package:proplilly/client/models/client_property_extensions.dart';
 import 'package:proplilly/client/screens/client_update_property_screen.dart';
-import 'package:proplilly/client/services/client_my_properties_service.dart';
+import 'package:proplilly/client/services/client_property_detail_service.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
 import 'package:proplilly/client/theme/screen_spacing.dart';
 import 'package:proplilly/client/widgets/premium/premium_buttons.dart';
+import 'package:proplilly/client/widgets/premium/premium_error_state.dart';
 import 'package:proplilly/client/widgets/proplilly_app_bar_logo_action.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Property details for a [ClientPropertyData] from the My Properties list.
+/// Property details loaded from `GET {live_url}/user/properties/{property_id}`.
 class ClientPropertyDetailsScreen extends StatefulWidget {
-  ClientPropertyDetailsScreen({
+  const ClientPropertyDetailsScreen({
     super.key,
-    ClientPropertyData? propertyData,
-    ClientPropertyData? property,
-  }) : propertyData = propertyData ?? property! {
-    assert(
-      propertyData != null || property != null,
-      'Either propertyData or property must be provided.',
-    );
-  }
+    required this.propertyId,
+  });
 
-  final ClientPropertyData propertyData;
+  final String propertyId;
 
   @override
   State<ClientPropertyDetailsScreen> createState() =>
@@ -34,26 +29,58 @@ class ClientPropertyDetailsScreen extends StatefulWidget {
 class _ClientPropertyDetailsScreenState
     extends State<ClientPropertyDetailsScreen> {
   late final PageController _imageController;
-  final _propertiesService = ClientMyPropertiesService();
+  final _detailService = ClientPropertyDetailService();
 
-  late ClientPropertyData _propertyData;
+  bool _isLoading = true;
+  String? _loadError;
+  ClientPropertyDetailData? _detailData;
   bool _wasUpdated = false;
   int _currentImageIndex = 0;
 
-  ClientPropertyData get propertyData => _propertyData;
-  Property get property => _propertyData.property;
+  ClientPropertyDetailData get detailData => _detailData!;
+  ClientPropertyDetail get property => detailData.details;
 
   @override
   void initState() {
     super.initState();
-    _propertyData = widget.propertyData;
     _imageController = PageController();
+    _loadPropertyDetail();
   }
 
   @override
   void dispose() {
     _imageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPropertyDetail() async {
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
+
+    final result =
+        await _detailService.fetchPropertyDetail(widget.propertyId);
+    if (!mounted) return;
+
+    switch (result) {
+      case ClientPropertyDetailFetchSuccess(:final data):
+        setState(() {
+          _detailData = data;
+          _isLoading = false;
+          _loadError = null;
+          _currentImageIndex = 0;
+        });
+        if (_imageController.hasClients) {
+          _imageController.jumpToPage(0);
+        }
+      case ClientPropertyDetailFetchFailure(:final message):
+        setState(() {
+          _detailData = null;
+          _isLoading = false;
+          _loadError = message;
+        });
+    }
   }
 
   void _goToPreviousImage(int imageCount) {
@@ -73,7 +100,7 @@ class _ClientPropertyDetailsScreenState
   }
 
   void _openImageViewer(int initialIndex) {
-    final images = propertyData.imageUrls;
+    final images = detailData.imageUrls;
     if (images.isEmpty) return;
 
     Navigator.of(context).push<void>(
@@ -128,35 +155,11 @@ class _ClientPropertyDetailsScreenState
   }
 
   Future<void> _reloadProperty() async {
-    final propertyId = property.propertyId.trim();
-    if (propertyId.isEmpty) return;
-
-    final result = await _propertiesService.fetchProperties();
-    if (!mounted) return;
-
-    if (result case ClientPropertiesFetchSuccess(:final properties)) {
-      ClientPropertyData? updated;
-      for (final item in properties) {
-        if (item.property.propertyId.trim() == propertyId) {
-          updated = item;
-          break;
-        }
-      }
-
-      if (updated != null) {
-        setState(() {
-          _propertyData = updated!;
-          _currentImageIndex = 0;
-        });
-        if (_imageController.hasClients) {
-          _imageController.jumpToPage(0);
-        }
-      }
-    }
+    await _loadPropertyDetail();
   }
 
   Future<void> _openEditProperty() async {
-    final propertyId = property.propertyId.trim();
+    final propertyId = widget.propertyId.trim();
     if (propertyId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -169,10 +172,7 @@ class _ClientPropertyDetailsScreenState
 
     final updated = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
-        builder: (_) => ClientUpdatePropertyScreen(
-          propertyId: propertyId,
-          propertyData: _propertyData,
-        ),
+        builder: (_) => ClientUpdatePropertyScreen(propertyId: propertyId),
       ),
     );
 
@@ -185,8 +185,6 @@ class _ClientPropertyDetailsScreenState
   @override
   Widget build(BuildContext context) {
     final horizontal = ScreenSpacing.horizontal(context);
-    final images = propertyData.imageUrls;
-    final documents = propertyData.documentUrls;
 
     return PopScope(
       canPop: false,
@@ -200,80 +198,107 @@ class _ClientPropertyDetailsScreenState
           title: const Text('Property Details'),
           actions: ProplillyAppBar.clientActions(),
         ),
-        body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _PropertyImageCarousel(
-                    images: images,
-                    pageController: _imageController,
-                    currentIndex: _currentImageIndex,
-                    onPageChanged: (index) =>
-                        setState(() => _currentImageIndex = index),
-                    onImageTap: _openImageViewer,
-                    onPrevious: () => _goToPreviousImage(images.length),
-                    onNext: () => _goToNextImage(images.length),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(horizontal, 20, horizontal, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _PropertyInfoGrid(propertyData: propertyData),
-                        if (documents.isNotEmpty) ...[
-                          const SizedBox(height: 24),
-                          Text(
-                            'Documents',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.primaryDark,
+        body: _buildBody(context, horizontal),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, double horizontal) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
+      );
+    }
+
+    if (_loadError != null) {
+      return PremiumErrorState(
+        message: _loadError!,
+        onRetry: _loadPropertyDetail,
+      );
+    }
+
+    if (_detailData == null) {
+      return PremiumErrorState(
+        message: 'Property details are not available.',
+        onRetry: _loadPropertyDetail,
+      );
+    }
+
+    final images = detailData.imageUrls;
+    final documents = detailData.documentUrls;
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _PropertyImageCarousel(
+                  images: images,
+                  pageController: _imageController,
+                  currentIndex: _currentImageIndex,
+                  onPageChanged: (index) =>
+                      setState(() => _currentImageIndex = index),
+                  onImageTap: _openImageViewer,
+                  onPrevious: () => _goToPreviousImage(images.length),
+                  onNext: () => _goToNextImage(images.length),
+                ),
+                Padding(
+                  padding: EdgeInsets.fromLTRB(horizontal, 20, horizontal, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _PropertyInfoGrid(detailData: detailData),
+                      if (documents.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        Text(
+                          'Documents',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primaryDark,
+                              ),
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: [
+                            for (var i = 0; i < documents.length; i++)
+                              SizedBox(
+                                width: documents.length == 1
+                                    ? double.infinity
+                                    : null,
+                                child: PremiumOutlineButton(
+                                  label: documents.length == 1
+                                      ? 'View Document'
+                                      : 'View Document ${i + 1}',
+                                  onPressed: () => _openDocument(documents[i]),
                                 ),
-                          ),
-                          const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              for (var i = 0; i < documents.length; i++)
-                                SizedBox(
-                                  width: documents.length == 1
-                                      ? double.infinity
-                                      : null,
-                                  child: PremiumOutlineButton(
-                                    label: documents.length == 1
-                                        ? 'View Document'
-                                        : 'View Document ${i + 1}',
-                                    onPressed: () => _openDocument(documents[i]),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ],
+                              ),
+                          ],
+                        ),
                       ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
-            child: PremiumPrimaryButton(
-              label: 'Edit Details',
-              icon: Icons.edit_outlined,
-              onPressed: _openEditProperty,
-            ),
+        ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(horizontal, 8, horizontal, 24),
+          child: PremiumPrimaryButton(
+            label: 'Edit Details',
+            icon: Icons.edit_outlined,
+            onPressed: _openEditProperty,
           ),
-        ],
-      ),
-      ),
+        ),
+      ],
     );
   }
 }
@@ -435,20 +460,20 @@ class _CarouselArrowButton extends StatelessWidget {
 }
 
 class _PropertyInfoGrid extends StatelessWidget {
-  const _PropertyInfoGrid({required this.propertyData});
+  const _PropertyInfoGrid({required this.detailData});
 
-  final ClientPropertyData propertyData;
+  final ClientPropertyDetailData detailData;
 
   @override
   Widget build(BuildContext context) {
-    final property = propertyData.property;
+    final property = detailData.details;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _PropertyInfoCard(
           label: 'Property Name',
-          value: propertyData.displayValue(property.propertyName),
+          value: detailData.displayValue(property.propertyName),
           icon: Icons.home_work_outlined,
         ),
         const SizedBox(height: 12),
@@ -457,7 +482,7 @@ class _PropertyInfoGrid extends StatelessWidget {
             Expanded(
               child: _PropertyInfoCard(
                 label: 'Property Type',
-                value: propertyData.displayValue(property.propertyType),
+                value: detailData.displayValue(property.propertyType),
                 icon: Icons.category_outlined,
               ),
             ),
@@ -465,9 +490,9 @@ class _PropertyInfoGrid extends StatelessWidget {
             Expanded(
               child: _PropertyInfoCard(
                 label: 'Status',
-                value: propertyData.displayStatus,
+                value: detailData.displayStatus,
                 icon: Icons.info_outline_rounded,
-                valueColor: _statusColor(propertyData.displayStatus),
+                valueColor: _statusColor(detailData.displayStatus),
               ),
             ),
           ],
@@ -478,7 +503,7 @@ class _PropertyInfoGrid extends StatelessWidget {
             Expanded(
               child: _PropertyInfoCard(
                 label: 'City',
-                value: propertyData.displayValue(property.city),
+                value: detailData.displayValue(property.city),
                 icon: Icons.location_city_outlined,
               ),
             ),
@@ -486,7 +511,7 @@ class _PropertyInfoGrid extends StatelessWidget {
             Expanded(
               child: _PropertyInfoCard(
                 label: 'State',
-                value: propertyData.displayValue(property.state),
+                value: detailData.displayValue(property.state),
                 icon: Icons.map_outlined,
               ),
             ),
@@ -495,7 +520,7 @@ class _PropertyInfoGrid extends StatelessWidget {
         const SizedBox(height: 12),
         _PropertyInfoCard(
           label: 'Address',
-          value: propertyData.displayValue(property.address),
+          value: detailData.displayValue(property.address),
           icon: Icons.location_on_outlined,
         ),
         const SizedBox(height: 12),
@@ -504,7 +529,7 @@ class _PropertyInfoGrid extends StatelessWidget {
             Expanded(
               child: _PropertyInfoCard(
                 label: 'Plot Type',
-                value: propertyData.displayPlotType,
+                value: detailData.displayPlotType,
                 icon: Icons.landscape_outlined,
               ),
             ),
@@ -512,12 +537,22 @@ class _PropertyInfoGrid extends StatelessWidget {
             Expanded(
               child: _PropertyInfoCard(
                 label: 'Plot Size',
-                value: propertyData.displayArea,
+                value: detailData.displayArea,
                 icon: Icons.square_foot_outlined,
               ),
             ),
           ],
         ),
+        const SizedBox(height: 24),
+        Text(
+          'Account Manager',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.primaryDark,
+              ),
+        ),
+        const SizedBox(height: 14),
+        _AccountManagerCard(detailData: detailData),
       ],
     );
   }
@@ -534,6 +569,124 @@ class _PropertyInfoGrid extends StatelessWidget {
       return AppColors.error;
     }
     return null;
+  }
+}
+
+class _AccountManagerCard extends StatelessWidget {
+  const _AccountManagerCard({required this.detailData});
+
+  final ClientPropertyDetailData detailData;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).textTheme;
+    final manager = detailData.accountManager;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.primaryLight.withValues(alpha: 0.28),
+        ),
+        boxShadow: PremiumDecorations.cardShadow(opacity: 0.06),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Row(
+          //   children: [
+          //     Container(
+          //       padding: const EdgeInsets.all(7),
+          //       decoration: PremiumDecorations.iconTile(AppColors.primary),
+          //       child: const Icon(
+          //         Icons.support_agent_outlined,
+          //         size: 16,
+          //         color: AppColors.primaryDark,
+          //       ),
+          //     ),
+          //     const SizedBox(width: 8),
+          //     Expanded(
+          //       child: Text(
+          //         'Contact Details',
+          //         style: theme.labelMedium?.copyWith(
+          //           color: AppColors.textSecondary,
+          //           fontWeight: FontWeight.w700,
+          //         ),
+          //       ),
+          //     ),
+          //   ],
+          // ),
+          // const SizedBox(height: 14),
+          _AccountManagerDetailRow(
+            label: 'Name',
+            value: detailData.displayValue(manager.name),
+            icon: Icons.person_outline_rounded,
+          ),
+          const SizedBox(height: 12),
+          _AccountManagerDetailRow(
+            label: 'Email',
+            value: detailData.displayValue(manager.email),
+            icon: Icons.email_outlined,
+          ),
+          const SizedBox(height: 12),
+          _AccountManagerDetailRow(
+            label: 'Phone Number',
+            value: detailData.displayValue(manager.phone),
+            icon: Icons.phone_outlined,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountManagerDetailRow extends StatelessWidget {
+  const _AccountManagerDetailRow({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).textTheme;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: AppColors.primaryDark),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.labelMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: theme.titleSmall?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w800,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

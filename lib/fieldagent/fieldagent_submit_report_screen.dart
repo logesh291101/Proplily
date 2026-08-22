@@ -203,9 +203,9 @@ class _FieldAgentSubmitReportScreenState
   }
 
   String _buildHeaderSubtitle(MySchedulePropertyDetail detail) {
-    final name = detail.propertyName?.trim() ?? '';
-    final address = detail.address?.trim() ?? '';
-    final city = detail.city?.trim() ?? '';
+    final name = detail.propertyName.trim();
+    final address = detail.address.trim();
+    final city = detail.city.trim();
     final location = [address, city].where((part) => part.isNotEmpty).join(', ');
 
     if (name.isEmpty && location.isEmpty) return '—';
@@ -280,8 +280,8 @@ class _FieldAgentSubmitReportScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    detail.accountManagerName?.trim().isNotEmpty == true
-                        ? detail.accountManagerName!.trim()
+                    detail.accountManagerName.trim().isNotEmpty
+                        ? detail.accountManagerName.trim()
                         : '—',
                     style: theme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,

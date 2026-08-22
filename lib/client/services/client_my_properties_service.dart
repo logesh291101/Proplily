@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:proplilly/auth/auth_preferences.dart';
 import 'package:proplilly/auth/session_expiry_handler.dart';
-import 'package:proplilly/client/models/client_properties_model.dart';
+import 'package:proplilly/client/models/client_properties_list_model.dart';
 import 'package:proplilly/client/services/client_live_url_api.dart';
 import 'package:proplilly/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -18,7 +18,7 @@ final class ClientPropertiesFetchSuccess extends ClientPropertiesFetchResult {
     this.message = '',
   });
 
-  final List<ClientPropertyData> properties;
+  final List<ClientProperty> properties;
   final String message;
 }
 
@@ -123,7 +123,7 @@ class ClientMyPropertiesService {
     final decoded = jsonDecode(trimmed);
 
     if (decoded is List) {
-      final properties = ClientPropertiesModel.parsePropertyDataList(decoded);
+      final properties = ClientPropertiesListModel.parsePropertyList(decoded);
       return ClientPropertiesFetchSuccess(properties: properties);
     }
 
@@ -139,19 +139,22 @@ class ClientMyPropertiesService {
       return ClientPropertiesFetchFailure(message: apiError);
     }
 
-    final status = map['status'] == true;
-    final message = map['message']?.toString().trim() ?? '';
+    final model = ClientPropertiesListModel.fromJson(map);
+    final modelError = _readErrorsText(model.errors);
+    if (modelError != null) {
+      return ClientPropertiesFetchFailure(message: modelError);
+    }
 
-    if (!status) {
+    if (!model.status) {
+      final message = model.message.trim();
       return ClientPropertiesFetchFailure(
         message: message.isNotEmpty ? message : 'Could not load properties.',
       );
     }
 
-    final properties = ClientPropertiesModel.parsePropertyDataList(map['data']);
     return ClientPropertiesFetchSuccess(
-      properties: properties,
-      message: message,
+      properties: model.data,
+      message: model.message.trim(),
     );
   }
 

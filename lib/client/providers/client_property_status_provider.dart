@@ -12,15 +12,29 @@ class PropertyStatusProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   String? _emptyMessage;
-  List<ClientPropertyStatusItem> _properties = [];
+  List<ClientPropertyStatus> _properties = [];
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String? get emptyMessage => _emptyMessage;
-  List<ClientPropertyStatusItem> get properties => _properties;
+  List<ClientPropertyStatus> get properties {
+    _ensureValidProperties();
+    return List<ClientPropertyStatus>.unmodifiable(_properties);
+  }
 
-  bool get hasProperties =>
-      _properties.isNotEmpty && _errorMessage == null;
+  /// Clears stale list instances left by hot reload after model migrations.
+  void _ensureValidProperties() {
+    try {
+      _properties = List<ClientPropertyStatus>.from(_properties);
+    } catch (_) {
+      _properties = <ClientPropertyStatus>[];
+    }
+  }
+
+  bool get hasProperties {
+    _ensureValidProperties();
+    return _properties.isNotEmpty && _errorMessage == null;
+  }
 
   Future<void> loadPropertyStatus() async {
     if (_isLoading) return;
@@ -28,6 +42,7 @@ class PropertyStatusProvider extends ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     _emptyMessage = null;
+    _properties = <ClientPropertyStatus>[];
     notifyListeners();
 
     final result = await _propertyStatusService.fetchPropertyStatus();
@@ -36,7 +51,7 @@ class PropertyStatusProvider extends ChangeNotifier {
 
     switch (result) {
       case PropertyStatusFetchSuccess(:final model):
-        _properties = model.data;
+        _properties = List<ClientPropertyStatus>.from(model.data);
         _errorMessage = null;
         if (model.data.isEmpty) {
           final msg = model.message.trim();
@@ -45,7 +60,7 @@ class PropertyStatusProvider extends ChangeNotifier {
           _emptyMessage = null;
         }
       case PropertyStatusFetchFailure(:final message):
-        _properties = [];
+        _properties = <ClientPropertyStatus>[];
         _errorMessage = message;
         _emptyMessage = null;
     }

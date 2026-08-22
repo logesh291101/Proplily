@@ -1,6 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:proplilly/auth/auth_preferences.dart';
 import 'package:proplilly/auth/session_expiry_handler.dart';
 import 'package:proplilly/client/services/client_live_url_api.dart';
@@ -23,15 +24,16 @@ final class EditClientProfileFailure extends EditClientProfileResult {
   final String? message;
 }
 
-/// POST `{live_url}/user/profile/update` with name and phone.
+/// POST `{live_url}/user/profile/update` with only the changed profile fields.
 class EditClientProfileService {
-  EditClientProfileService({http.Client? httpClient}) : _httpClient = httpClient;
+  EditClientProfileService({Dio? dio}) : _dio = dio;
 
-  final http.Client? _httpClient;
+  final Dio? _dio;
 
   Future<EditClientProfileResult> updateProfile({
-    required String name,
-    required String phone,
+    String? name,
+    String? phone,
+    String? profileImagePath,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final token =
@@ -51,58 +53,112 @@ class EditClientProfileService {
       return const EditClientProfileFailure(message: null);
     }
 
-    final ownsClient = _httpClient == null;
-    final client = _httpClient ?? http.Client();
+    final formMap = <String, dynamic>{};
+
+    final trimmedName = name?.trim();
+    if (trimmedName != null && trimmedName.isNotEmpty) {
+      formMap['name'] = trimmedName;
+    }
+
+    final trimmedPhone = phone?.trim();
+    if (trimmedPhone != null && trimmedPhone.isNotEmpty) {
+      formMap['phone'] = trimmedPhone;
+    }
+
+    final trimmedImagePath = profileImagePath?.trim();
+    if (trimmedImagePath != null &&
+        trimmedImagePath.isNotEmpty &&
+        File(trimmedImagePath).existsSync()) {
+      final fileName = trimmedImagePath.split(Platform.pathSeparator).last;
+      formMap['profile_image'] = await MultipartFile.fromFile(
+        trimmedImagePath,
+        filename: fileName,
+      );
+    }
+
+    if (formMap.isEmpty) {
+      return const EditClientProfileFailure(message: null);
+    }
+
+    final ownsDio = _dio == null;
+    final dio = _dio ?? Dio();
 
     try {
-      final response = await client.post(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'name': name,
-          'phone': phone,
-        }),
+      final formData = FormData.fromMap(formMap);
+
+      final response = await dio.post<dynamic>(
+        uri.toString(),
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+          contentType: 'multipart/form-data',
+          validateStatus: (_) => true,
+        ),
       );
 
-      if (await ApiService.handleSessionExpiryIfNeeded(
-        statusCode: response.statusCode,
-        body: response.body,
-      )) {
-        return const EditClientProfileFailure(
-          message: SessionExpiryHandler.message,
-        );
-      }
-
-      final parsed = _tryParseJson(response.body);
-      if (parsed == null) {
-        return const EditClientProfileFailure(message: null);
-      }
-
-      final errorsText = _readErrorsText(parsed['errors']);
-      if (errorsText != null) {
-        return EditClientProfileFailure(message: errorsText);
-      }
-
-      final messageText = _readMessageText(parsed);
-      if (_isUpdateSuccess(parsed, response.statusCode)) {
-        await _persistNameIfPresent(prefs, name);
-        return EditClientProfileSuccess(message: messageText);
-      }
-
-      return EditClientProfileFailure(message: messageText);
-    } on http.ClientException {
+      return _parseUpdateResponse(
+        prefs: prefs,
+        updatedName: trimmedName,
+        statusCode: response.statusCode ?? 0,
+        body: _encodeResponseBody(response.data),
+      );
+    } on DioException {
       return const EditClientProfileFailure(message: null);
     } catch (_) {
       return const EditClientProfileFailure(message: null);
     } finally {
-      if (ownsClient) {
-        client.close();
+      if (ownsDio) {
+        dio.close();
       }
     }
+  }
+
+  Future<EditClientProfileResult> _parseUpdateResponse({
+    required SharedPreferences prefs,
+    required int statusCode,
+    required String body,
+    String? updatedName,
+  }) async {
+    if (await ApiService.handleSessionExpiryIfNeeded(
+      statusCode: statusCode,
+      body: body,
+    )) {
+      return const EditClientProfileFailure(
+        message: SessionExpiryHandler.message,
+      );
+    }
+
+    final parsed = _tryParseJson(body);
+    if (parsed == null) {
+      return const EditClientProfileFailure(message: null);
+    }
+
+    final errorsText = _readErrorsText(parsed['errors']);
+    if (errorsText != null) {
+      return EditClientProfileFailure(message: errorsText);
+    }
+
+    final messageText = _readMessageText(parsed);
+    if (_isUpdateSuccess(parsed, statusCode)) {
+      if (updatedName != null) {
+        await _persistNameIfPresent(prefs, updatedName);
+      }
+      return EditClientProfileSuccess(message: messageText);
+    }
+
+    return EditClientProfileFailure(message: messageText);
+  }
+
+  String _encodeResponseBody(dynamic data) {
+    if (data == null) return '';
+    if (data is String) return data;
+    if (data is Map || data is List) {
+      return jsonEncode(data);
+    }
+    return data.toString();
   }
 
   Future<void> _persistNameIfPresent(
@@ -155,12 +211,13 @@ class EditClientProfileService {
     if (rawErrors == null) return null;
 
     if (rawErrors is Map) {
-      final map = Map<String, dynamic>.from(rawErrors);
-      for (final v in map.values) {
+      final parts = <String>[];
+      for (final v in Map<String, dynamic>.from(rawErrors).values) {
         final text = _readStringLike(v);
-        if (text != null) return text;
+        if (text != null) parts.add(text);
       }
-      return null;
+      if (parts.isEmpty) return null;
+      return parts.join('\n');
     }
 
     return _readStringLike(rawErrors);
@@ -177,7 +234,13 @@ class EditClientProfileService {
       return t.isEmpty ? null : t;
     }
     if (raw is List && raw.isNotEmpty) {
-      return _readStringLike(raw.first);
+      final parts = <String>[];
+      for (final item in raw) {
+        final text = _readStringLike(item);
+        if (text != null) parts.add(text);
+      }
+      if (parts.isEmpty) return null;
+      return parts.join('\n');
     }
     return null;
   }

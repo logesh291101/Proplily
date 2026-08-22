@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:proplilly/client/models/client_properties_detail_model.dart';
 import 'package:proplilly/client/data/client_plot_types.dart';
 import 'package:proplilly/client/data/client_property_locations.dart';
-import 'package:proplilly/client/models/client_property_status_model.dart';
+import 'package:proplilly/client/services/client_property_detail_service.dart';
 import 'package:proplilly/client/services/client_property_service.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/theme/screen_spacing.dart';
@@ -11,6 +12,7 @@ import 'package:proplilly/client/widgets/client_add_property/client_add_property
 import 'package:proplilly/client/widgets/client_add_property/client_add_property_location_section.dart';
 import 'package:proplilly/client/widgets/client_add_property/client_add_property_size_field.dart';
 import 'package:proplilly/client/widgets/premium/premium_buttons.dart';
+import 'package:proplilly/client/widgets/premium/premium_error_state.dart';
 import 'package:proplilly/client/widgets/proplilly_app_bar_logo_action.dart';
 import 'package:proplilly/client/widgets/client_referral/client_referral_premium_field.dart';
 import 'package:proplilly/client/widgets/ui/modern_section_card.dart';
@@ -19,10 +21,10 @@ import 'package:proplilly/client/widgets/ui/modern_section_card.dart';
 class EditPropertyScreen extends StatefulWidget {
   const EditPropertyScreen({
     super.key,
-    required this.property,
+    required this.propertyId,
   });
 
-  final ClientPropertyStatusItem property;
+  final String propertyId;
 
   @override
   State<EditPropertyScreen> createState() => _EditPropertyScreenState();
@@ -31,6 +33,7 @@ class EditPropertyScreen extends StatefulWidget {
 class _EditPropertyScreenState extends State<EditPropertyScreen> {
   final _formKey = GlobalKey<FormState>();
   final _propertyService = PropertyService();
+  final _detailService = ClientPropertyDetailService();
 
   late final TextEditingController _propertyNameController;
   late final TextEditingController _plotSizeController;
@@ -40,33 +43,69 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
   late final TextEditingController _ownerNameController;
   late final TextEditingController _phoneController;
 
-  late String? _plotType;
-  late String? _country;
-  late String? _state;
-  late String? _city;
+  String? _plotType;
+  String? _country;
+  String? _state;
+  String? _city;
   bool _isSubmitting = false;
+  bool _isLoadingDetail = true;
+  String? _loadError;
 
   @override
   void initState() {
     super.initState();
-    final property = widget.property;
+    _propertyNameController = TextEditingController();
+    _plotSizeController = TextEditingController();
+    _addressController = TextEditingController();
+    _latitudeController = TextEditingController();
+    _longitudeController = TextEditingController();
+    _ownerNameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _loadPropertyDetail();
+  }
 
-    _propertyNameController = TextEditingController(text: property.propertyName);
-    _plotSizeController = TextEditingController(text: property.plotSize);
-    _addressController = TextEditingController(text: property.address);
-    _latitudeController = TextEditingController(
-      text: property.latitude.isNotEmpty ? property.latitude : '20.593700',
-    );
-    _longitudeController = TextEditingController(
-      text: property.longitude.isNotEmpty ? property.longitude : '78.962900',
-    );
-    _ownerNameController = TextEditingController(text: property.ownerName);
-    _phoneController = TextEditingController(text: property.ownerPhone);
+  Future<void> _loadPropertyDetail() async {
+    setState(() {
+      _isLoadingDetail = true;
+      _loadError = null;
+    });
 
-    _plotType = PlotTypes.normalize(property.propertyType);
-    _state = property.state.trim().isNotEmpty ? property.state.trim() : null;
-    _city = property.city.trim().isNotEmpty ? property.city.trim() : null;
-    _country = property.country.trim().isNotEmpty ? property.country.trim() : null;
+    final result = await _detailService.fetchPropertyDetail(widget.propertyId);
+    if (!mounted) return;
+
+    switch (result) {
+      case ClientPropertyDetailFetchSuccess(:final data):
+        _applyDetailData(data.property);
+        setState(() {
+          _isLoadingDetail = false;
+          _loadError = null;
+        });
+      case ClientPropertyDetailFetchFailure(:final message):
+        setState(() {
+          _isLoadingDetail = false;
+          _loadError = message;
+        });
+    }
+  }
+
+  void _applyDetailData(ClientPropertyDetail details) {
+    _propertyNameController.text = details.propertyName.trim();
+    _plotSizeController.text = details.plotSize.trim();
+    _addressController.text = details.address.trim();
+    _latitudeController.text = details.latitude.trim().isNotEmpty
+        ? details.latitude.trim()
+        : '20.593700';
+    _longitudeController.text = details.longitude.trim().isNotEmpty
+        ? details.longitude.trim()
+        : '78.962900';
+
+    _plotType = PlotTypes.normalize(
+      details.plotType.isNotEmpty ? details.plotType : details.propertyType,
+    );
+    _state = details.state.trim().isNotEmpty ? details.state.trim() : null;
+    _city = details.city.trim().isNotEmpty ? details.city.trim() : null;
+    _country = null;
+
     _resolveCountryIfNeeded();
   }
 
@@ -74,7 +113,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
     if (_country != null && _country!.isNotEmpty) return;
 
     await PropertyLocations.ensureLoaded();
-    final resolved = PropertyLocations.countryForState(widget.property.state);
+    final resolved = PropertyLocations.countryForState(_state ?? '');
     if (!mounted || resolved == null) return;
 
     setState(() => _country = resolved);
@@ -119,7 +158,7 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
     setState(() => _isSubmitting = true);
     try {
       final result = await _propertyService.updateProperty(
-        propertyId: widget.property.propertyId,
+        propertyId: widget.propertyId,
         propertyName: _propertyNameController.text.trim(),
         plotType: _plotType!,
         plotSize: _plotSizeController.text.trim(),
@@ -168,114 +207,129 @@ class _EditPropertyScreenState extends State<EditPropertyScreen> {
         children: [
           const AddPropertyHeroSection(),
           Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              padding: EdgeInsets.fromLTRB(horizontal, 16, horizontal, 32),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ModernSectionCard(
-                      title: 'Property Details',
-                      titleIcon: Icons.home_work_outlined,
-                      child: Column(
-                        children: [
-                          ClientReferralPremiumField(
-                            controller: _propertyNameController,
-                            label: 'Property Name *',
-                            hint: '',
-                            icon: Icons.badge_outlined,
-                            validator: (v) => FormValidators.requiredField(
-                              v,
-                              fieldName: 'a property name',
-                            ),
+            child: _isLoadingDetail
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  )
+                : _loadError != null
+                    ? PremiumErrorState(
+                        message: _loadError!,
+                        onRetry: _loadPropertyDetail,
+                      )
+                    : SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        padding:
+                            EdgeInsets.fromLTRB(horizontal, 16, horizontal, 32),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              ModernSectionCard(
+                                title: 'Property Details',
+                                titleIcon: Icons.home_work_outlined,
+                                child: Column(
+                                  children: [
+                                    ClientReferralPremiumField(
+                                      controller: _propertyNameController,
+                                      label: 'Property Name *',
+                                      hint: '',
+                                      icon: Icons.badge_outlined,
+                                      validator: (v) =>
+                                          FormValidators.requiredField(
+                                        v,
+                                        fieldName: 'a property name',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 18),
+                                    AddPropertyDropdownField<String>(
+                                      label: 'Plot Type *',
+                                      hint: 'Select Plot Type',
+                                      icon: Icons.category_outlined,
+                                      value: PlotTypes.dropdownValue(_plotType),
+                                      items: PlotTypes.addPropertyOptions
+                                          .map(
+                                            (option) => DropdownMenuItem(
+                                              value: option.value,
+                                              child: Text(option.label),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (v) =>
+                                          setState(() => _plotType = v),
+                                      validator: (v) =>
+                                          FormValidators.requiredDropdown(
+                                        v,
+                                        fieldName: 'Plot type',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 18),
+                                    AddPropertySizeField(
+                                      controller: _plotSizeController,
+                                      validator: (v) =>
+                                          FormValidators.requiredField(
+                                        v,
+                                        fieldName: 'plot size',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              ModernSectionCard(
+                                title: 'Location',
+                                titleIcon: Icons.place_outlined,
+                                child: AddPropertyLocationSection(
+                                  country: _country,
+                                  state: _state,
+                                  city: _city,
+                                  addressController: _addressController,
+                                  latitudeController: _latitudeController,
+                                  longitudeController: _longitudeController,
+                                  onCountryChanged: _onCountryChanged,
+                                  onStateChanged: _onStateChanged,
+                                  onCityChanged: (value) =>
+                                      setState(() => _city = value),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              ModernSectionCard(
+                                title: 'Owner Details',
+                                titleIcon: Icons.person_outline_rounded,
+                                child: Column(
+                                  children: [
+                                    ClientReferralPremiumField(
+                                      controller: _ownerNameController,
+                                      label: 'Owner Name *',
+                                      hint: 'Enter owner name',
+                                      icon: Icons.person_outline_rounded,
+                                      validator: FormValidators.fullName,
+                                    ),
+                                    const SizedBox(height: 18),
+                                    ClientReferralPremiumField(
+                                      controller: _phoneController,
+                                      label: 'Phone Number *',
+                                      hint: '',
+                                      icon: Icons.phone_outlined,
+                                      keyboardType: TextInputType.phone,
+                                      validator: FormValidators.phoneNumber,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 26),
+                              PremiumPrimaryButton(
+                                label: 'Save Changes',
+                                icon: Icons.save_outlined,
+                                isLoading: _isSubmitting,
+                                onPressed: _isSubmitting ? null : _onSave,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 18),
-                          AddPropertyDropdownField<String>(
-                            label: 'Plot Type *',
-                            hint: 'Select Plot Type',
-                            icon: Icons.category_outlined,
-                            value: PlotTypes.dropdownValue(_plotType),
-                            items: PlotTypes.addPropertyOptions
-                                .map(
-                                  (option) => DropdownMenuItem(
-                                    value: option.value,
-                                    child: Text(option.label),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (v) => setState(() => _plotType = v),
-                            validator: (v) => FormValidators.requiredDropdown(
-                              v,
-                              fieldName: 'Plot type',
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          AddPropertySizeField(
-                            controller: _plotSizeController,
-                            validator: (v) => FormValidators.requiredField(
-                              v,
-                              fieldName: 'plot size',
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 18),
-                    ModernSectionCard(
-                      title: 'Location',
-                      titleIcon: Icons.place_outlined,
-                      child: AddPropertyLocationSection(
-                        country: _country,
-                        state: _state,
-                        city: _city,
-                        addressController: _addressController,
-                        latitudeController: _latitudeController,
-                        longitudeController: _longitudeController,
-                        onCountryChanged: _onCountryChanged,
-                        onStateChanged: _onStateChanged,
-                        onCityChanged: (value) => setState(() => _city = value),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    ModernSectionCard(
-                      title: 'Owner Details',
-                      titleIcon: Icons.person_outline_rounded,
-                      child: Column(
-                        children: [
-                          ClientReferralPremiumField(
-                            controller: _ownerNameController,
-                            label: 'Owner Name *',
-                            hint: 'Enter owner name',
-                            icon: Icons.person_outline_rounded,
-                            validator: FormValidators.fullName,
-                          ),
-                          const SizedBox(height: 18),
-                          ClientReferralPremiumField(
-                            controller: _phoneController,
-                            label: 'Phone Number *',
-                            hint: '',
-                            icon: Icons.phone_outlined,
-                            keyboardType: TextInputType.phone,
-                            validator: FormValidators.phoneNumber,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 26),
-                    PremiumPrimaryButton(
-                      label: 'Save Changes',
-                      icon: Icons.save_outlined,
-                      isLoading: _isSubmitting,
-                      onPressed: _isSubmitting ? null : _onSave,
-                    ),
-                  ],
-                ),
-              ),
-            ),
           ),
         ],
       ),

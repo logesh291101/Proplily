@@ -272,7 +272,6 @@ class _AddPropertyMapSectionState extends State<AddPropertyMapSection> {
     );
   }
 }
-
 class _MapZoomButton extends StatelessWidget {
   const _MapZoomButton({required this.icon, required this.onTap});
 
@@ -298,3 +297,4 @@ class _MapZoomButton extends StatelessWidget {
     );
   }
 }
+

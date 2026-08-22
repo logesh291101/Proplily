@@ -14,6 +14,8 @@ import 'package:proplilly/client/widgets/client_profile/client_profile_quick_act
 import 'package:proplilly/client/widgets/premium/premium_error_state.dart';
 import 'package:proplilly/client/widgets/proplilly_app_bar_logo_action.dart';
 import 'package:proplilly/fieldagent/providers/fieldagent_profile_provider.dart';
+import 'package:proplilly/fieldagent/fieldagent_raise_ticket_screen.dart';
+import 'package:proplilly/fieldagent/screens/edit_fieldagent_profile_screen.dart';
 
 class FieldAgentProfileScreen extends StatelessWidget {
   const FieldAgentProfileScreen({super.key});
@@ -58,11 +60,34 @@ class _FieldAgentProfileViewState extends State<_FieldAgentProfileView> {
 
   void _onEditAvatar() => _showComingSoon('Profile photo editing');
 
-  void _onEditProfile() => _showComingSoon('Edit profile');
+  Future<void> _onEditProfile() async {
+    final data = context.read<FieldAgentProfileProvider>().profileData?.data;
+    if (data == null) return;
+
+    final updated = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => EditFieldAgentProfileScreen(
+          initialName: data.name?.trim() ?? '',
+          initialPhone: data.phone?.trim() ?? '',
+          initialProfileImage: data.profileImage?.trim(),
+        ),
+      ),
+    );
+
+    if (updated == true && mounted) {
+      await context.read<FieldAgentProfileProvider>().refresh();
+    }
+  }
 
   void _onManageSubscription() => _showComingSoon('Subscription management');
 
-  void _onContactSupport() => _showComingSoon('Contact support');
+  void _onContactSupport() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const FieldAgentRaiseTicketScreen(),
+      ),
+    );
+  }
 
   Future<void> _refresh() async {
     await context.read<FieldAgentProfileProvider>().refresh();

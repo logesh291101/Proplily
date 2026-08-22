@@ -5,20 +5,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// Firebase Remote Config parameter names (must match the Firebase console).
 abstract final class RemoteConfigKeys {
+  static const String androidForceUpdate = 'android_forceUpdate';
   static const String androidVersion = 'android_version';
   static const String androidUpdateReason = 'androidupdate_reason';
   static const String appstoreUrl = 'appstore_url';
-  static const String forceUpdate = 'force_update';
+  static const String iosForceUpdate = 'ios_forceUpdate';
   static const String iosVersion = 'ios_version';
   static const String iosUpdateReason = 'iosupdate_reason';
   static const String liveUrl = 'live_url';
   static const String playstoreUrl = 'playstore_url';
 
   static const List<String> all = [
+    androidForceUpdate,
     androidVersion,
     androidUpdateReason,
     appstoreUrl,
-    forceUpdate,
+    iosForceUpdate,
     iosVersion,
     iosUpdateReason,
     liveUrl,
@@ -30,20 +32,22 @@ abstract final class RemoteConfigKeys {
 ///
 /// Keep these aligned with `setDefaults` in Firebase and with your release policy.
 abstract final class RemoteConfigDefaults {
+  static const String androidForceUpdate = 'false';
   static const String androidVersion = '1.0.0';
   static const String androidUpdateReason = '';
   static const String appstoreUrl = '';
-  static const bool forceUpdate = false;
+  static const String iosForceUpdate = 'false';
   static const String iosVersion = '1.0.0';
   static const String iosUpdateReason = '';
   static const String liveUrl = '';
   static const String playstoreUrl = '';
 
   static Map<String, Object> get asFirebaseDefaults => {
+        RemoteConfigKeys.androidForceUpdate: androidForceUpdate,
         RemoteConfigKeys.androidVersion: androidVersion,
         RemoteConfigKeys.androidUpdateReason: androidUpdateReason,
         RemoteConfigKeys.appstoreUrl: appstoreUrl,
-        RemoteConfigKeys.forceUpdate: forceUpdate,
+        RemoteConfigKeys.iosForceUpdate: iosForceUpdate,
         RemoteConfigKeys.iosVersion: iosVersion,
         RemoteConfigKeys.iosUpdateReason: iosUpdateReason,
         RemoteConfigKeys.liveUrl: liveUrl,
@@ -153,6 +157,10 @@ class RemoteConfigService {
 
     await Future.wait([
       p.setString(
+        RemoteConfigKeys.androidForceUpdate,
+        rc.getString(RemoteConfigKeys.androidForceUpdate),
+      ),
+      p.setString(
         RemoteConfigKeys.androidVersion,
         rc.getString(RemoteConfigKeys.androidVersion),
       ),
@@ -164,9 +172,9 @@ class RemoteConfigService {
         RemoteConfigKeys.appstoreUrl,
         rc.getString(RemoteConfigKeys.appstoreUrl),
       ),
-      p.setBool(
-        RemoteConfigKeys.forceUpdate,
-        rc.getBool(RemoteConfigKeys.forceUpdate),
+      p.setString(
+        RemoteConfigKeys.iosForceUpdate,
+        rc.getString(RemoteConfigKeys.iosForceUpdate),
       ),
       p.setString(
         RemoteConfigKeys.iosVersion,
@@ -191,13 +199,23 @@ class RemoteConfigService {
   static Future<void> persistDefaultsOnly() async {
     final p = prefs;
     await Future.wait([
-      p.setString(RemoteConfigKeys.androidVersion, RemoteConfigDefaults.androidVersion),
+      p.setString(
+        RemoteConfigKeys.androidForceUpdate,
+        RemoteConfigDefaults.androidForceUpdate,
+      ),
+      p.setString(
+        RemoteConfigKeys.androidVersion,
+        RemoteConfigDefaults.androidVersion,
+      ),
       p.setString(
         RemoteConfigKeys.androidUpdateReason,
         RemoteConfigDefaults.androidUpdateReason,
       ),
       p.setString(RemoteConfigKeys.appstoreUrl, RemoteConfigDefaults.appstoreUrl),
-      p.setBool(RemoteConfigKeys.forceUpdate, RemoteConfigDefaults.forceUpdate),
+      p.setString(
+        RemoteConfigKeys.iosForceUpdate,
+        RemoteConfigDefaults.iosForceUpdate,
+      ),
       p.setString(RemoteConfigKeys.iosVersion, RemoteConfigDefaults.iosVersion),
       p.setString(
         RemoteConfigKeys.iosUpdateReason,
@@ -213,6 +231,10 @@ class RemoteConfigService {
 
   // --- Typed reads from SharedPreferences (safe before refresh if [initialize] ran) ---
 
+  static String get androidForceUpdate =>
+      prefs.getString(RemoteConfigKeys.androidForceUpdate) ??
+      RemoteConfigDefaults.androidForceUpdate;
+
   static String get androidVersion =>
       prefs.getString(RemoteConfigKeys.androidVersion) ??
       RemoteConfigDefaults.androidVersion;
@@ -225,9 +247,9 @@ class RemoteConfigService {
       prefs.getString(RemoteConfigKeys.appstoreUrl) ??
       RemoteConfigDefaults.appstoreUrl;
 
-  static bool get forceUpdate =>
-      prefs.getBool(RemoteConfigKeys.forceUpdate) ??
-      RemoteConfigDefaults.forceUpdate;
+  static String get iosForceUpdate =>
+      prefs.getString(RemoteConfigKeys.iosForceUpdate) ??
+      RemoteConfigDefaults.iosForceUpdate;
 
   static String get iosVersion =>
       prefs.getString(RemoteConfigKeys.iosVersion) ??

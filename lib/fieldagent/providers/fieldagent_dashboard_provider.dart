@@ -52,7 +52,7 @@ class FieldAgentDashboardProvider extends ChangeNotifier {
 
   String get agentName => dashboardData?.fieldAgentName?.trim() ?? '';
 
-  String get userType => dashboardData?.userType?.trim() ?? '';
+  String get role => dashboardData?.role?.trim() ?? '';
 
   int? get pendingTasksCount => dashboardData?.summary?.pendingTasks;
 

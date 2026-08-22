@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:proplilly/client/screens/client_my_referrals_screen.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/data/client_country_codes.dart';
 import 'package:proplilly/client/models/client_country_code.dart';
@@ -137,7 +138,19 @@ class _ClientReferralViewState extends State<_ClientReferralView> {
                       referralCode: referralProvider.referralCode,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
+                  PremiumPrimaryButton(
+                    label: 'My Referrals',
+                    icon: Icons.people_alt_outlined,
+                    onPressed: () {
+                      Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ClientMyReferralsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   _ClientReferralFormCard(
                     formKey: _formKey,
                     fullNameController: _fullNameController,

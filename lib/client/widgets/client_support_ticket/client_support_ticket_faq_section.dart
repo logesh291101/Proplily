@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
-import 'package:proplilly/client/models/client_support_ticket_model.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
+
+/// FAQ entry for the support ticket hub UI.
+class ClientSupportTicketFaqEntry {
+  const ClientSupportTicketFaqEntry({
+    required this.question,
+    required this.answer,
+  });
+
+  final String question;
+  final String answer;
+}
 
 /// Premium FAQ accordion section.
 class ClientSupportTicketFaqSection extends StatelessWidget {
   const ClientSupportTicketFaqSection({super.key, required this.items});
 
-  final List<ClientSupportTicketFaqItem> items;
+  final List<ClientSupportTicketFaqEntry> items;
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +71,7 @@ class ClientSupportTicketFaqSection extends StatelessWidget {
 class _PremiumFaqTile extends StatelessWidget {
   const _PremiumFaqTile({required this.item, required this.isLast});
 
-  final ClientSupportTicketFaqItem item;
+  final ClientSupportTicketFaqEntry item;
   final bool isLast;
 
   @override

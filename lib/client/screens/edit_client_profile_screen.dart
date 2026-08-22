@@ -1,18 +1,24 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/providers/edit_client_profile_provider.dart';
 import 'package:proplilly/client/services/edit_client_profile_service.dart';
 import 'package:proplilly/client/widgets/proplilly_app_bar_logo_action.dart';
+
 class EditClientProfileScreen extends StatelessWidget {
   const EditClientProfileScreen({
     super.key,
     required this.initialName,
     required this.initialPhone,
+    this.initialProfileImage,
   });
 
   final String initialName;
   final String initialPhone;
+  final String? initialProfileImage;
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +27,7 @@ class EditClientProfileScreen extends StatelessWidget {
       child: _EditClientProfileView(
         initialName: initialName,
         initialPhone: initialPhone,
+        initialProfileImage: initialProfileImage,
       ),
     );
   }
@@ -30,10 +37,12 @@ class _EditClientProfileView extends StatefulWidget {
   const _EditClientProfileView({
     required this.initialName,
     required this.initialPhone,
+    this.initialProfileImage,
   });
 
   final String initialName;
   final String initialPhone;
+  final String? initialProfileImage;
 
   @override
   State<_EditClientProfileView> createState() => _EditClientProfileViewState();
@@ -43,6 +52,11 @@ class _EditClientProfileViewState extends State<_EditClientProfileView> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
+
+  String? _selectedImagePath;
+  bool _networkImageFailed = false;
+
+  static final _allowedExtensions = {'.jpg', '.jpeg', '.png', '.webp'};
 
   @override
   void initState() {
@@ -58,17 +72,84 @@ class _EditClientProfileViewState extends State<_EditClientProfileView> {
     super.dispose();
   }
 
-  Future<void> _update() async {
-    FocusScope.of(context).unfocus();
+  String get _avatarLetter {
+    final trimmed = _nameController.text.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed[0].toUpperCase();
+  }
 
-    final formState = _formKey.currentState;
-    if (formState == null || !formState.validate()) {
+  bool get _hasExistingNetworkImage {
+    if (_networkImageFailed || _selectedImagePath != null) return false;
+    final url = widget.initialProfileImage?.trim();
+    if (url == null || url.isEmpty) return false;
+    final uri = Uri.tryParse(url);
+    return uri != null && uri.hasScheme;
+  }
+
+  bool _isAllowedImage(String path) {
+    final lower = path.toLowerCase();
+    return _allowedExtensions.any(lower.endsWith);
+  }
+
+  Future<void> _pickProfileImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    if (!_isAllowedImage(picked.path)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Only JPG, JPEG, PNG, and WEBP images are supported.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
       return;
     }
 
+    setState(() {
+      _selectedImagePath = picked.path;
+      _networkImageFailed = false;
+    });
+  }
+
+  bool get _nameChanged =>
+      _nameController.text.trim() != widget.initialName.trim();
+
+  bool get _phoneChanged =>
+      _phoneController.text.trim() != widget.initialPhone.trim();
+
+  bool get _imageChanged => _selectedImagePath != null;
+
+  bool get _hasChanges => _nameChanged || _phoneChanged || _imageChanged;
+
+  Future<void> _update() async {
+    FocusScope.of(context).unfocus();
+
+    if (!_hasChanges) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No changes to save.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final formState = _formKey.currentState;
+    if (formState == null) return;
+
+    if (_nameChanged || _phoneChanged) {
+      if (!formState.validate()) return;
+    }
+
     final result = await context.read<EditClientProfileProvider>().updateProfile(
-          name: _nameController.text,
-          phone: _phoneController.text,
+          name: _nameChanged ? _nameController.text : null,
+          phone: _phoneChanged ? _phoneController.text : null,
+          profileImagePath: _imageChanged ? _selectedImagePath : null,
         );
 
     if (!mounted) return;
@@ -144,6 +225,22 @@ class _EditClientProfileViewState extends State<_EditClientProfileView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        Center(
+                          child: _EditProfileAvatar(
+                            avatarLetter: _avatarLetter,
+                            selectedImagePath: _selectedImagePath,
+                            existingImageUrl: _hasExistingNetworkImage
+                                ? widget.initialProfileImage?.trim()
+                                : null,
+                            onNetworkImageError: () {
+                              if (mounted) {
+                                setState(() => _networkImageFailed = true);
+                              }
+                            },
+                            onPickImage: _pickProfileImage,
+                          ),
+                        ),
+                        SizedBox(height: sectionGap),
                         Text(
                           'Update your profile',
                           style: textTheme.headlineSmall?.copyWith(
@@ -162,12 +259,14 @@ class _EditClientProfileViewState extends State<_EditClientProfileView> {
                           controller: _nameController,
                           textInputAction: TextInputAction.next,
                           autovalidateMode: AutovalidateMode.onUserInteraction,
+                          onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
                             hintText: 'Name',
                             hintStyle: TextStyle(fontSize: bodyFont),
                             filled: false,
                           ),
                           validator: (value) {
+                            if (!_nameChanged) return null;
                             if (value == null || value.trim().isEmpty) {
                               return 'Please enter your name';
                             }
@@ -189,6 +288,7 @@ class _EditClientProfileViewState extends State<_EditClientProfileView> {
                             filled: false,
                           ),
                           validator: (value) {
+                            if (!_phoneChanged) return null;
                             if (value == null || value.trim().isEmpty) {
                               return 'Please enter your phone number';
                             }
@@ -227,6 +327,93 @@ class _EditClientProfileViewState extends State<_EditClientProfileView> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _EditProfileAvatar extends StatelessWidget {
+  const _EditProfileAvatar({
+    required this.avatarLetter,
+    required this.onPickImage,
+    this.selectedImagePath,
+    this.existingImageUrl,
+    this.onNetworkImageError,
+  });
+
+  final String avatarLetter;
+  final String? selectedImagePath;
+  final String? existingImageUrl;
+  final VoidCallback onPickImage;
+  final VoidCallback? onNetworkImageError;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).textTheme;
+    final selectedPath = selectedImagePath?.trim();
+    final hasSelectedImage =
+        selectedPath != null && selectedPath.isNotEmpty && File(selectedPath).existsSync();
+    final networkUrl = existingImageUrl?.trim();
+    final hasNetworkImage = !hasSelectedImage &&
+        networkUrl != null &&
+        networkUrl.isNotEmpty;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPickImage,
+            customBorder: const CircleBorder(),
+            child: CircleAvatar(
+              radius: 48,
+              backgroundColor: AppColors.primary,
+              backgroundImage: hasSelectedImage
+                  ? FileImage(File(selectedPath))
+                  : hasNetworkImage
+                      ? NetworkImage(networkUrl)
+                      : null,
+              onBackgroundImageError: hasNetworkImage
+                  ? (_, __) => onNetworkImageError?.call()
+                  : null,
+              child: hasSelectedImage || hasNetworkImage
+                  ? null
+                  : Text(
+                      avatarLetter,
+                      style: theme.headlineMedium?.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPickImage,
+              customBorder: const CircleBorder(),
+              child: Ink(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryDark,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.white, width: 2),
+                ),
+                child: const Icon(
+                  Icons.edit_rounded,
+                  color: AppColors.white,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

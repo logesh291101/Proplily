@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:proplilly/auth/auth_preferences.dart';
+import 'package:proplilly/auth/auth_role_router.dart';
 import 'package:proplilly/remote_config/remote_config_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -130,29 +131,34 @@ class LoginService {
 
     final userId = _readPersistableValue(userMap['id']);
     final email = _readPersistableValue(userMap['email']);
-    final role = _readPersistableValue(userMap['role']);
-    final userType = _readPersistableValue(userMap['user_type']);
+    final rawRole = _readPersistableValue(userMap['role']);
     final name = _readPersistableValue(userMap['name']);
 
     if (userId == null ||
         email == null ||
-        role == null ||
-        userType == null ||
+        rawRole == null ||
         name == null) {
       return null;
     }
+
+    // Persist the API role as-is (normalized). Navigation treats
+    // `client` and `customer` as equivalent Client Module roles.
+    final role = AuthRoleRouter.normalizeRole(rawRole);
+    if (role.isEmpty) return null;
 
     final results = await Future.wait<bool>([
       prefs.setString(AuthPreferenceKeys.token, token),
       prefs.setString(AuthPreferenceKeys.userId, userId),
       prefs.setString(AuthPreferenceKeys.email, email),
       prefs.setString(AuthPreferenceKeys.role, role),
-      prefs.setString(AuthPreferenceKeys.userType, userType),
       prefs.setString(AuthPreferenceKeys.name, name),
     ]);
 
     if (!results.every((ok) => ok)) return null;
-    return role.trim().toLowerCase();
+
+    // Remove legacy user_type so navigation never falls back to it.
+    await prefs.remove('user_type');
+    return role;
   }
 
   String? _readPersistableValue(dynamic raw) {

@@ -150,8 +150,8 @@ class FieldAgentMySchedulePropertyDetailService {
       return MySchedulePropertyDetailFetchFailure(message: apiError);
     }
 
-    if (!model.isSuccess || model.data == null) {
-      final msg = model.message?.trim() ?? '';
+    if (!model.status) {
+      final msg = model.message.trim();
       return MySchedulePropertyDetailFetchFailure(
         message: msg.isNotEmpty ? msg : 'Could not load property details.',
       );

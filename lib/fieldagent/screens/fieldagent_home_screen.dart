@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:proplilly/app_update/app_update_service.dart';
 import 'package:proplilly/auth/login_screen.dart';
 import 'package:proplilly/auth/logout_service.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
@@ -13,6 +14,7 @@ import 'package:proplilly/fieldagent/screens/fieldagent_profile_screen.dart';
 import 'package:proplilly/fieldagent/fieldagent_raise_ticket_screen.dart';
 import 'package:proplilly/fieldagent/fieldagent_referral_screen.dart';
 import 'package:proplilly/fieldagent/fieldagent_submitted_reports_screen.dart';
+import 'package:proplilly/client/screens/client_ticket_list_screen.dart';
 import 'package:proplilly/fieldagent/widgets/fieldagent_drawer.dart';
 import 'package:proplilly/fieldagent/widgets/fieldagent_home_hero_section.dart';
 import 'package:proplilly/client/widgets/client_home/client_home_section_title.dart';
@@ -51,6 +53,15 @@ class _FieldAgentHomeViewState extends State<_FieldAgentHomeView> {
 
   bool _logoutInProgress = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      AppUpdateService.checkAndPrompt(context);
+    });
+  }
+
   Future<void> _refreshDashboard() async {
     await context.read<FieldAgentDashboardProvider>().refresh();
   }
@@ -81,6 +92,7 @@ class _FieldAgentHomeViewState extends State<_FieldAgentHomeView> {
       'Referrals' => 'field_agent_referrals',
       'Profile' => 'field_agent_profile',
       'Raise Support Ticket' => 'field_agent_raise_ticket',
+      'Your Tickets' => 'field_agent_your_tickets',
       _ => null,
     };
   }
@@ -93,6 +105,7 @@ class _FieldAgentHomeViewState extends State<_FieldAgentHomeView> {
       'Referrals' => const FieldAgentReferralScreen(),
       'Profile' => const FieldAgentProfileScreen(),
       'Raise Support Ticket' => const FieldAgentRaiseTicketScreen(),
+      'Your Tickets' => const TicketListScreen(clientModule: false),
       _ => null,
     };
   }

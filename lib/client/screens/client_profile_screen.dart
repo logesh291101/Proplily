@@ -71,6 +71,7 @@ class _ClientProfileViewState extends State<_ClientProfileView> {
         builder: (_) => EditClientProfileScreen(
           initialName: data.name,
           initialPhone: data.phone,
+          initialProfileImage: data.profileImage?.trim(),
         ),
       ),
     );

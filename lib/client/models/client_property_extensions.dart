@@ -1,21 +1,101 @@
 import 'dart:convert';
 
-import 'package:proplilly/client/models/client_properties_model.dart';
-import 'package:proplilly/client/models/client_property_status_model.dart';
+import 'package:proplilly/client/models/client_properties_detail_model.dart';
+import 'package:proplilly/client/models/client_properties_list_model.dart';
 
-extension ClientPropertyDataUi on ClientPropertyData {
-  Property get details => property;
-
+extension ClientPropertyListUi on ClientProperty {
   String get photoUrl {
-    final urls = imageUrls;
-    return urls.isNotEmpty ? urls.first : '';
+    final photo = propertyPhoto?.trim();
+    if (photo == null || photo.isEmpty) return '';
+
+    final urls = ClientPropertyMediaParser.parseUrls(photo);
+    return urls.isNotEmpty ? urls.first : photo;
   }
+
+  String displayValue(String raw) {
+    final trimmed = raw.trim();
+    return trimmed.isNotEmpty ? trimmed : '—';
+  }
+
+  String get displayStatus {
+    final monitoring = monitoringStatus.trim();
+    if (monitoring.isNotEmpty) return monitoring;
+    final authorization = authorizationStatus?.trim() ?? '';
+    if (authorization.isNotEmpty) return authorization;
+    return '—';
+  }
+
+  String get displayLocation {
+    final cityText = city.trim();
+    final stateText = state.trim();
+    if (cityText.isNotEmpty && stateText.isNotEmpty) {
+      return '$cityText, $stateText';
+    }
+    if (cityText.isNotEmpty) return cityText;
+    if (stateText.isNotEmpty) return stateText;
+    final addressText = address.trim();
+    return addressText.isNotEmpty ? addressText : '—';
+  }
+
+  String get displayArea {
+    final size = plotSize.trim();
+    if (size.isEmpty) return '—';
+    final unit = sizeUnit.trim();
+    return unit.isNotEmpty ? '$size $unit' : size;
+  }
+
+  String get displayPlotType {
+    final plot = plotType.trim();
+    if (plot.isNotEmpty) return plot;
+    final type = propertyType.trim();
+    return type.isNotEmpty ? type : '—';
+  }
+
+  bool get hasMapCoordinates {
+    final lat = latitude.trim();
+    final lng = longitude.trim();
+    if (lat.isEmpty || lng.isEmpty) return false;
+    return double.tryParse(lat) != null && double.tryParse(lng) != null;
+  }
+
+  String get verifiedDaysAgoLabel {
+    final date = _parseDate(verifiedAt) ?? _parseDate(updatedAt);
+    if (date == null) return 'Last verified: —';
+    final days = DateTime.now().difference(date).inDays;
+    if (days <= 0) return 'Last verified: today';
+    if (days == 1) return 'Last verified: 1 day ago';
+    return 'Last verified: $days days ago';
+  }
+
+  String get formattedUpdatedAt {
+    final date = _parseDate(updatedAt);
+    if (date == null) return '—';
+    return _formatDate(date);
+  }
+
+  static DateTime? _parseDate(String? raw) {
+    final text = raw?.trim() ?? '';
+    if (text.isEmpty) return null;
+    return DateTime.tryParse(text);
+  }
+
+  static String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+}
+
+extension ClientPropertyDetailDataUi on ClientPropertyDetailData {
+  ClientPropertyDetail get details => property;
 
   List<String> get imageUrls {
     final primaryFirst = [...images]
       ..sort((a, b) {
-        final aPrimary = a.isPrimary.trim() == '1' || a.isPrimary.toLowerCase() == 'true';
-        final bPrimary = b.isPrimary.trim() == '1' || b.isPrimary.toLowerCase() == 'true';
+        final aPrimary =
+            a.isPrimary.trim() == '1' || a.isPrimary.toLowerCase() == 'true';
+        final bPrimary =
+            b.isPrimary.trim() == '1' || b.isPrimary.toLowerCase() == 'true';
         if (aPrimary == bPrimary) return 0;
         return aPrimary ? -1 : 1;
       });
@@ -46,25 +126,6 @@ extension ClientPropertyDataUi on ClientPropertyData {
     return '—';
   }
 
-  String get displayLocation {
-    final cityText = property.city.trim();
-    final stateText = property.state.trim();
-    if (cityText.isNotEmpty && stateText.isNotEmpty) {
-      return '$cityText, $stateText';
-    }
-    if (cityText.isNotEmpty) return cityText;
-    if (stateText.isNotEmpty) return stateText;
-    final addressText = property.address.trim();
-    return addressText.isNotEmpty ? addressText : '—';
-  }
-
-  String get displayArea {
-    final size = property.plotSize.trim();
-    if (size.isEmpty) return '—';
-    final unit = property.sizeUnit.trim();
-    return unit.isNotEmpty ? '$size $unit' : size;
-  }
-
   String get displayPlotType {
     final plot = property.plotType.trim();
     if (plot.isNotEmpty) return plot;
@@ -72,60 +133,11 @@ extension ClientPropertyDataUi on ClientPropertyData {
     return type.isNotEmpty ? type : '—';
   }
 
-  bool get hasMapCoordinates {
-    final lat = property.latitude.trim();
-    final lng = property.longitude.trim();
-    if (lat.isEmpty || lng.isEmpty) return false;
-    return double.tryParse(lat) != null && double.tryParse(lng) != null;
-  }
-
-  String get verifiedDaysAgoLabel {
-    final date = _parseDate(property.verifiedAt) ?? _parseDate(property.updatedAt);
-    if (date == null) return 'Last verified: —';
-    final days = DateTime.now().difference(date).inDays;
-    if (days <= 0) return 'Last verified: today';
-    if (days == 1) return 'Last verified: 1 day ago';
-    return 'Last verified: $days days ago';
-  }
-
-  String get formattedUpdatedAt {
-    final date = _parseDate(property.updatedAt);
-    if (date == null) return '—';
-    return _formatDate(date);
-  }
-
-  ClientPropertyStatusItem toEditPropertyItem() {
-    return ClientPropertyStatusItem(
-      propertyId: property.propertyId.trim(),
-      propertyName: property.propertyName.trim(),
-      propertyType: property.plotType.trim().isNotEmpty
-          ? property.plotType.trim()
-          : property.propertyType.trim(),
-      address: property.address.trim(),
-      city: property.city.trim(),
-      country: '',
-      state: property.state.trim(),
-      plotSize: property.plotSize.trim(),
-      latitude: property.latitude.trim(),
-      longitude: property.longitude.trim(),
-      ownerName: '',
-      ownerPhone: '',
-      monitoringStatus: property.monitoringStatus.trim(),
-      authorizationStatus: property.authorizationStatus?.trim() ?? '',
-      createdAt: property.createdAt.trim(),
-    );
-  }
-
-  static DateTime? _parseDate(String? raw) {
-    final text = raw?.trim() ?? '';
-    if (text.isEmpty) return null;
-    return DateTime.tryParse(text);
-  }
-
-  static String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
+  String get displayArea {
+    final size = property.plotSize.trim();
+    if (size.isEmpty) return '—';
+    final unit = property.sizeUnit.trim();
+    return unit.isNotEmpty ? '$size $unit' : size;
   }
 }
 

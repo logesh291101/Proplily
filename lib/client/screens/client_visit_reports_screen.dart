@@ -76,7 +76,7 @@ class _ClientVisitReportsScreenState extends State<ClientVisitReportsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Visit Reports'),
+        //title: const Text('Visit Reports'),
         actions: ProplillyAppBar.clientActions(),
       ),
       body: Column(

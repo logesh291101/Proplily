@@ -3,7 +3,7 @@ description: "Property monitoring and management application"
 publish_to: 'none'
 
 #version: 1.0.0+1
-version: 1.0.4+5
+version: 1.0.7+8
 
 environment:
   sdk: ^3.8.1
@@ -37,7 +37,6 @@ dependencies:
   dio:
   
   # Maps & Location
-  google_maps_flutter:
   geolocator:
   geocoding:
   flutter_map: ^8.0.0

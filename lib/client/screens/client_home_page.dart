@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:proplilly/app_update/app_update_service.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
+import 'package:proplilly/client/screens/client_additional_services_screen.dart';
 import 'package:proplilly/client/screens/client_add_property_screen.dart';
 import 'package:proplilly/client/screens/client_feedback_screen.dart';
 import 'package:proplilly/client/screens/client_property_status_screen.dart';
@@ -68,6 +70,10 @@ class _HomePageViewState extends State<_HomePageView> {
   void initState() {
     super.initState();
     ClientNotificationProvider.shared().refresh();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      AppUpdateService.checkAndPrompt(context);
+    });
   }
 
   static const List<({String label, IconData icon})> _menuItems = [
@@ -79,6 +85,7 @@ class _HomePageViewState extends State<_HomePageView> {
     (label: 'Customer Billing', icon: Icons.receipt_long),
     (label: 'Client Feedback', icon: Icons.feedback),
     (label: 'Referrals', icon: Icons.people_alt),
+    (label: 'Additional Services', icon: Icons.home_repair_service_outlined),
     (label: 'My Profile', icon: Icons.person),
     (label: 'Raise Support Ticket', icon: Icons.support_agent),
     (label: 'Your Tickets', icon: Icons.confirmation_number_outlined),
@@ -150,6 +157,12 @@ class _HomePageViewState extends State<_HomePageView> {
         Navigator.of(context).push<void>(
           MaterialPageRoute<void>(
             builder: (_) => const TicketListScreen(),
+          ),
+        );
+      case 'Additional Services':
+        Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const ClientAdditionalServicesScreen(),
           ),
         );
       case 'Add Property':

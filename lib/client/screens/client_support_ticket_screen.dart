@@ -6,7 +6,6 @@ import 'package:proplilly/client/services/client_support_ticket_service.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
 import 'package:proplilly/client/theme/screen_spacing.dart';
 import 'package:proplilly/client/utils/form_validators.dart';
-import 'package:proplilly/client/widgets/client_support_ticket/client_support_ticket_assistance_card.dart';
 import 'package:proplilly/client/widgets/client_support_ticket/client_support_ticket_category_field.dart';
 import 'package:proplilly/client/widgets/client_support_ticket/client_support_ticket_hero_section.dart';
 import 'package:proplilly/client/widgets/premium/premium_buttons.dart';
@@ -58,35 +57,30 @@ class _ClientSupportTicketViewState extends State<_ClientSupportTicketView> {
 
     if (!mounted) return;
 
-    try {
-      switch (result) {
-        case ClientSupportTicketSuccess(:final message):
-          final text = message?.trim();
-          if (text != null && text.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(text),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        case ClientSupportTicketFailure(:final message):
-          final text = message?.trim();
-          if (text != null && text.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(text),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-      }
-    } finally {
-      if (mounted) {
+    switch (result) {
+      case ClientSupportTicketSuccess(:final message):
+        final text = message?.trim();
+        if (text != null && text.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(text),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
         _clearForm();
-      }
+      case ClientSupportTicketFailure(:final message):
+        final text = message?.trim();
+        if (text != null && text.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(text),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
     }
   }
 

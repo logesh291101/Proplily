@@ -24,15 +24,15 @@ class ClientSupportTicketProvider extends ChangeNotifier {
     _isSubmitting = true;
     notifyListeners();
 
-    final result = await _clientSupportTicketService.submitTicket(
-      subject: subject.trim(),
-      category: category.trim(),
-      message: message.trim(),
-    );
-
-    _isSubmitting = false;
-    notifyListeners();
-
-    return result;
+    try {
+      return await _clientSupportTicketService.submitTicket(
+        subject: subject.trim(),
+        category: category.trim(),
+        message: message.trim(),
+      );
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
   }
 }

@@ -230,7 +230,7 @@ class PropertyData {
   String get accountManagerDisplay {
     final name = accountManagerName?.trim();
     if (name == null || name.isEmpty) return '—';
-    return '$name (AM)';
+    return '$name';
   }
 
   String get plotSizeDisplay {
@@ -268,15 +268,6 @@ class PropertyData {
     if (!hasMapCoordinates) return null;
     return Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=${latitude!.trim()},${longitude!.trim()}',
-    );
-  }
-
-  Uri? get openStreetMapUri {
-    if (!hasMapCoordinates) return null;
-    final lat = latitude!.trim();
-    final lng = longitude!.trim();
-    return Uri.parse(
-      'https://www.openstreetmap.org/?mlat=$lat&mlon=$lng#map=16/$lat/$lng',
     );
   }
 

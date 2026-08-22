@@ -1,7 +1,122 @@
+// class ClientPropertyStatusModel {
+//   final bool status;
+//   final String message;
+//   final List<ClientPropertyStatus> data;
+//   final dynamic errors;
+//
+//   ClientPropertyStatusModel({
+//     required this.status,
+//     required this.message,
+//     required this.data,
+//     this.errors,
+//   });
+//
+//   factory ClientPropertyStatusModel.fromJson(Map<String, dynamic> json) {
+//     return ClientPropertyStatusModel(
+//       status: json['status'] ?? false,
+//       message: json['message']?.toString() ?? '',
+//       data: (json['data'] as List<dynamic>? ?? [])
+//           .whereType<Map>()
+//           .map(
+//             (e) => ClientPropertyStatus.fromJson(Map<String, dynamic>.from(e)),
+//           )
+//           .toList(),
+//       errors: json['errors'],
+//     );
+//   }
+//
+//   Map<String, dynamic> toJson() {
+//     return {
+//       'status': status,
+//       'message': message,
+//       'data': data.map((e) => e.toJson()).toList(),
+//       'errors': errors,
+//     };
+//   }
+//
+//   static List<ClientPropertyStatus> parsePropertyStatusList(dynamic raw) {
+//     if (raw == null) return [];
+//
+//     if (raw is List) {
+//       return raw
+//           .whereType<Map>()
+//           .map(
+//             (e) => ClientPropertyStatus.fromJson(Map<String, dynamic>.from(e)),
+//           )
+//           .toList();
+//     }
+//
+//     if (raw is Map) {
+//       return [
+//         ClientPropertyStatus.fromJson(Map<String, dynamic>.from(raw)),
+//       ];
+//     }
+//
+//     return [];
+//   }
+// }
+//
+// class ClientPropertyStatus {
+//   final String propertyId;
+//   final String propertyName;
+//   final String monitoringStatus;
+//   final String? coordinatorId;
+//   final String? coordinatorName;
+//   final String accountManagerName;
+//   final String accountManagerPhone;
+//   final String? lastVisit;
+//   final String? latestReviewStatus;
+//   final String? latestAdminStatus;
+//
+//   ClientPropertyStatus({
+//     required this.propertyId,
+//     required this.propertyName,
+//     required this.monitoringStatus,
+//     this.coordinatorId,
+//     this.coordinatorName,
+//     required this.accountManagerName,
+//     required this.accountManagerPhone,
+//     this.lastVisit,
+//     this.latestReviewStatus,
+//     this.latestAdminStatus,
+//   });
+//
+//   factory ClientPropertyStatus.fromJson(Map<String, dynamic> json) {
+//     return ClientPropertyStatus(
+//       propertyId: json['property_id']?.toString() ?? '',
+//       propertyName: json['property_name']?.toString() ?? '',
+//       monitoringStatus: json['monitoring_status']?.toString() ?? '',
+//       coordinatorId: json['coordinator_id']?.toString(),
+//       coordinatorName: json['coordinator_name']?.toString(),
+//       accountManagerName: json['account_manager_name']?.toString() ?? '',
+//       accountManagerPhone: json['account_manager_phone']?.toString() ?? '',
+//       lastVisit: json['last_visit']?.toString(),
+//       latestReviewStatus: json['latest_review_status']?.toString(),
+//       latestAdminStatus: json['latest_admin_status']?.toString(),
+//     );
+//   }
+//
+//   Map<String, dynamic> toJson() {
+//     return {
+//       'property_id': propertyId,
+//       'property_name': propertyName,
+//       'monitoring_status': monitoringStatus,
+//       'coordinator_id': coordinatorId,
+//       'coordinator_name': coordinatorName,
+//       'account_manager_name': accountManagerName,
+//       'account_manager_phone': accountManagerPhone,
+//       'last_visit': lastVisit,
+//       'latest_review_status': latestReviewStatus,
+//       'latest_admin_status': latestAdminStatus,
+//     };
+//   }
+// }
+
+
 class ClientPropertyStatusModel {
   final bool status;
   final String message;
-  final List<ClientPropertyStatusItem> data;
+  final List<ClientPropertyStatus> data;
   final dynamic errors;
 
   ClientPropertyStatusModel({
@@ -11,10 +126,21 @@ class ClientPropertyStatusModel {
     this.errors,
   });
 
-  factory ClientPropertyStatusModel.fromJson(Map<String, dynamic> json) {
+  factory ClientPropertyStatusModel.fromJson(
+      Map<String, dynamic>? json,
+      ) {
+    if (json == null) {
+      return ClientPropertyStatusModel(
+        status: false,
+        message: '',
+        data: const [],
+        errors: null,
+      );
+    }
+
     return ClientPropertyStatusModel(
       status: _parseStatus(json['status']),
-      message: _parseString(json['message']),
+      message: json['message']?.toString() ?? '',
       data: parsePropertyStatusList(json['data']),
       errors: json['errors'],
     );
@@ -30,158 +156,125 @@ class ClientPropertyStatusModel {
   }
 
   static bool _parseStatus(dynamic raw) {
+    if (raw == null) return false;
+
     if (raw is bool) return raw;
-    if (raw is int) return raw == 200;
-    if (raw is num) return raw == 200;
-    if (raw is String) {
-      final t = raw.trim().toLowerCase();
-      return t == '200' || t == 'true';
+
+    if (raw is num) {
+      return raw == 1 || raw == 200;
     }
+
+    if (raw is String) {
+      final value = raw.trim().toLowerCase();
+
+      return value == 'true' ||
+          value == '1' ||
+          value == '200' ||
+          value == 'success';
+    }
+
     return false;
   }
 
-  static List<ClientPropertyStatusItem> parsePropertyStatusList(dynamic raw) {
+  static List<ClientPropertyStatus> parsePropertyStatusList(dynamic raw) {
     if (raw == null) return [];
 
     if (raw is List) {
       return raw
-          .map(_mapFromDynamic)
-          .whereType<Map<String, dynamic>>()
-          .map(ClientPropertyStatusItem.fromJson)
+          .whereType<Map>()
+          .map(
+            (e) => ClientPropertyStatus.fromJson(
+          Map<String, dynamic>.from(e),
+        ),
+      )
           .toList();
     }
 
     if (raw is Map) {
-      final map = _mapFromDynamic(raw);
-      if (map == null) return [];
-      return [ClientPropertyStatusItem.fromJson(map)];
+      return [
+        ClientPropertyStatus.fromJson(
+          Map<String, dynamic>.from(raw),
+        ),
+      ];
     }
 
     return [];
   }
-
-  static Map<String, dynamic>? _mapFromDynamic(dynamic raw) {
-    if (raw is Map<String, dynamic>) return raw;
-    if (raw is Map) return Map<String, dynamic>.from(raw);
-    return null;
-  }
-
-  static String _parseString(dynamic raw) {
-    if (raw == null) return '';
-    if (raw is String) return raw;
-    return raw.toString();
-  }
 }
 
-/// One property record from `GET /user/properties/status`.
-class ClientPropertyStatusItem {
-  const ClientPropertyStatusItem({
-    required this.propertyId,
-    required this.propertyName,
-    required this.propertyType,
-    required this.address,
-    required this.city,
-    required this.country,
-    required this.state,
-    required this.plotSize,
-    required this.latitude,
-    required this.longitude,
-    required this.ownerName,
-    required this.ownerPhone,
-    required this.monitoringStatus,
-    required this.authorizationStatus,
-    required this.createdAt,
-  });
-
+class ClientPropertyStatus {
   final String propertyId;
   final String propertyName;
-  final String propertyType;
-  final String address;
-  final String city;
-  final String country;
-  final String state;
-  final String plotSize;
-  final String latitude;
-  final String longitude;
-  final String ownerName;
-  final String ownerPhone;
   final String monitoringStatus;
-  final String authorizationStatus;
-  final String createdAt;
+  final String? coordinatorId;
+  final String? coordinatorName;
+  final String accountManagerName;
+  final String accountManagerPhone;
+  final String? lastVisit;
+  final String? latestReviewStatus;
+  final String? latestAdminStatus;
 
-  factory ClientPropertyStatusItem.fromJson(Map<String, dynamic> json) {
-    return ClientPropertyStatusItem(
-      propertyId: _parseString(_read(json, ['property_id', 'propertyId', 'id'])),
-      propertyName:
-          _parseString(_read(json, ['property_name', 'propertyName', 'name'])),
-      propertyType: _parseString(
-        _read(json, ['property_type', 'propertyType', 'type']),
-      ),
-      address: _parseString(_read(json, ['address', 'property_address'])),
-      city: _parseString(_read(json, ['city', 'property_city'])),
-      country: _parseString(_read(json, ['country', 'property_country'])),
-      state: _parseString(_read(json, ['state', 'property_state'])),
-      plotSize: _parseString(_read(json, ['plot_size', 'plotSize', 'size'])),
-      latitude: _parseString(_read(json, ['latitude', 'lat'])),
-      longitude: _parseString(_read(json, ['longitude', 'lng', 'lon'])),
-      ownerName: _parseString(
-        _read(json, ['owner_name', 'ownerName', 'owner']),
-      ),
-      ownerPhone: _parseString(
-        _read(json, ['owner_phone', 'ownerPhone', 'phone', 'phone_number']),
-      ),
-      monitoringStatus: _parseString(
-        _read(json, [
-          'monitoring_status',
-          'monitoringStatus',
-          'monitoring',
-        ]),
-      ),
-      authorizationStatus: _parseString(
-        _read(json, [
-          'authorization_status',
-          'authorizationStatus',
-          'authorization',
-        ]),
-      ),
-      createdAt:
-          _parseString(_read(json, ['created_at', 'createdAt', 'created'])),
-    );
-  }
+  ClientPropertyStatus({
+    required this.propertyId,
+    required this.propertyName,
+    required this.monitoringStatus,
+    this.coordinatorId,
+    this.coordinatorName,
+    required this.accountManagerName,
+    required this.accountManagerPhone,
+    this.lastVisit,
+    this.latestReviewStatus,
+    this.latestAdminStatus,
+  });
 
-  static dynamic _read(Map<String, dynamic> json, List<String> keys) {
-    for (final key in keys) {
-      if (json.containsKey(key)) return json[key];
+  factory ClientPropertyStatus.fromJson(
+      Map<String, dynamic>? json,
+      ) {
+    if (json == null) {
+      return ClientPropertyStatus(
+        propertyId: '',
+        propertyName: '',
+        monitoringStatus: '',
+        coordinatorId: null,
+        coordinatorName: null,
+        accountManagerName: '',
+        accountManagerPhone: '',
+        lastVisit: null,
+        latestReviewStatus: null,
+        latestAdminStatus: null,
+      );
     }
-    return null;
-  }
 
-  static String _parseString(dynamic raw) {
-    if (raw == null) return '';
-    if (raw is String) return raw;
-    return raw.toString();
+    return ClientPropertyStatus(
+      propertyId: json['property_id']?.toString() ?? '',
+      propertyName: json['property_name']?.toString() ?? '',
+      monitoringStatus: json['monitoring_status']?.toString() ?? '',
+      coordinatorId: json['coordinator_id']?.toString(),
+      coordinatorName: json['coordinator_name']?.toString(),
+      accountManagerName:
+      json['account_manager_name']?.toString() ?? '',
+      accountManagerPhone:
+      json['account_manager_phone']?.toString() ?? '',
+      lastVisit: json['last_visit']?.toString(),
+      latestReviewStatus:
+      json['latest_review_status']?.toString(),
+      latestAdminStatus:
+      json['latest_admin_status']?.toString(),
+    );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'property_id': propertyId,
       'property_name': propertyName,
-      'property_type': propertyType,
-      'address': address,
-      'city': city,
-      'country': country,
-      'state': state,
-      'plot_size': plotSize,
-      'latitude': latitude,
-      'longitude': longitude,
-      'owner_name': ownerName,
-      'owner_phone': ownerPhone,
       'monitoring_status': monitoringStatus,
-      'authorization_status': authorizationStatus,
-      'created_at': createdAt,
+      'coordinator_id': coordinatorId,
+      'coordinator_name': coordinatorName,
+      'account_manager_name': accountManagerName,
+      'account_manager_phone': accountManagerPhone,
+      'last_visit': lastVisit,
+      'latest_review_status': latestReviewStatus,
+      'latest_admin_status': latestAdminStatus,
     };
   }
 }
-
-/// @deprecated Use [ClientPropertyStatusItem]. Kept for hot-reload migration only.
-typedef PropertyStatus = ClientPropertyStatusItem;

@@ -1,15 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:proplilly/client/models/client_properties_model.dart';
+import 'package:proplilly/client/models/client_properties_list_model.dart';
 import 'package:proplilly/client/models/client_property_extensions.dart';
 import 'package:proplilly/client/providers/client_home_properties_provider.dart';
 import 'package:proplilly/client/screens/client_visit_reports_screen.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
+import 'package:proplilly/client/utils/property_map_launcher.dart';
 import 'package:proplilly/client/widgets/premium/premium_buttons.dart';
 import 'package:proplilly/client/widgets/premium/premium_error_state.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Property carousel for the Client home screen.
 class HomePropertyCarousel extends StatefulWidget {
@@ -61,24 +61,12 @@ class _HomePropertyCarouselState extends State<HomePropertyCarousel> {
     );
   }
 
-  Future<void> _openOnMap(ClientPropertyData propertyData) async {
-    if (!propertyData.hasMapCoordinates) return;
-
-    final lat = propertyData.property.latitude.trim();
-    final lng = propertyData.property.longitude.trim();
-    final uri = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+  Future<void> _openOnMap(ClientProperty property) async {
+    await PropertyMapLauncher.open(
+      context,
+      latitude: property.latitude,
+      longitude: property.longitude,
     );
-
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not open map.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 
   @override
@@ -112,7 +100,7 @@ class _HomePropertyCarouselState extends State<HomePropertyCarousel> {
             onPageChanged: (index) => setState(() => _currentIndex = index),
             itemBuilder: (context, index) {
               return _PropertyCarouselCard(
-                propertyData: properties[index],
+                property: properties[index],
                 showPrevious: showPrevious && properties.length > 1,
                 showNext: showNext && properties.length > 1,
                 onPrevious: _goToPrevious,
@@ -130,7 +118,7 @@ class _HomePropertyCarouselState extends State<HomePropertyCarousel> {
 
 class _PropertyCarouselCard extends StatelessWidget {
   const _PropertyCarouselCard({
-    required this.propertyData,
+    required this.property,
     required this.showPrevious,
     required this.showNext,
     required this.onPrevious,
@@ -139,7 +127,7 @@ class _PropertyCarouselCard extends StatelessWidget {
     required this.onOpenOnMap,
   });
 
-  final ClientPropertyData propertyData;
+  final ClientProperty property;
   final bool showPrevious;
   final bool showNext;
   final VoidCallback onPrevious;
@@ -150,8 +138,7 @@ class _PropertyCarouselCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
-    final imageUrl = propertyData.photoUrl;
-    final details = propertyData.property;
+    final imageUrl = property.photoUrl;
 
     return Container(
       decoration: BoxDecoration(
@@ -224,7 +211,7 @@ class _PropertyCarouselCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        propertyData.displayStatus,
+                        property.displayStatus,
                         style: theme.labelLarge?.copyWith(
                           color: AppColors.white,
                           fontWeight: FontWeight.w800,
@@ -233,7 +220,7 @@ class _PropertyCarouselCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        propertyData.verifiedDaysAgoLabel,
+                        property.verifiedDaysAgoLabel,
                         style: theme.bodySmall?.copyWith(
                           color: AppColors.white.withValues(alpha: 0.88),
                           fontWeight: FontWeight.w600,
@@ -241,8 +228,8 @@ class _PropertyCarouselCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       Text(
-                        details.propertyName.trim().isNotEmpty
-                            ? details.propertyName.trim()
+                        property.propertyName.trim().isNotEmpty
+                            ? property.propertyName.trim()
                             : '—',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -254,7 +241,7 @@ class _PropertyCarouselCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        propertyData.displayLocation,
+                        property.displayLocation,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.bodySmall?.copyWith(
@@ -280,14 +267,14 @@ class _PropertyCarouselCard extends StatelessWidget {
                       Expanded(
                         child: _DetailColumn(
                           label: 'Area',
-                          value: propertyData.displayArea,
+                          value: property.displayArea,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _DetailColumn(
                           label: 'Updated At',
-                          value: propertyData.formattedUpdatedAt,
+                          value: property.formattedUpdatedAt,
                         ),
                       ),
                     ],
@@ -300,7 +287,7 @@ class _PropertyCarouselCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   PremiumOutlineButton(
                     label: 'Open on Map',
-                    onPressed: propertyData.hasMapCoordinates ? onOpenOnMap : null,
+                    onPressed: property.hasMapCoordinates ? onOpenOnMap : null,
                   ),
                 ],
               ),

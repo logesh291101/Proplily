@@ -1,8 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:proplilly/client/models/client_support_ticket_model.dart';
 import 'package:proplilly/client/models/client_ticket_extensions.dart';
-import 'package:proplilly/client/models/client_tickets_model.dart';
 import 'package:proplilly/client/providers/client_ticket_list_provider.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
@@ -16,9 +16,11 @@ class TicketDetailScreen extends StatelessWidget {
   const TicketDetailScreen({
     super.key,
     required this.ticketId,
+    this.clientModule = true,
   });
 
   final String ticketId;
+  final bool clientModule;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +31,9 @@ class TicketDetailScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Ticket Details'),
-        actions: ProplillyAppBar.clientActions(),
+        actions: clientModule
+            ? ProplillyAppBar.clientActions()
+            : ProplillyAppBar.logoActions(),
       ),
       body: ticket == null
           ? PremiumErrorState(
@@ -52,7 +56,7 @@ class TicketDetailScreen extends StatelessWidget {
 class _TicketDetailBody extends StatelessWidget {
   const _TicketDetailBody({required this.ticket});
 
-  final ClientTicketData ticket;
+  final ClientSupportTicket ticket;
 
   @override
   Widget build(BuildContext context) {
@@ -62,51 +66,51 @@ class _TicketDetailBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Container(
-        //   width: double.infinity,
-        //   padding: const EdgeInsets.all(18),
-        //   decoration: BoxDecoration(
-        //     gradient: LinearGradient(
-        //       begin: Alignment.topLeft,
-        //       end: Alignment.bottomRight,
-        //       colors: [
-        //         AppColors.accent.withValues(alpha: 0.5),
-        //         AppColors.white,
-        //       ],
-        //     ),
-        //     borderRadius: BorderRadius.circular(20),
-        //     border: Border.all(
-        //       color: AppColors.primaryLight.withValues(alpha: 0.3),
-        //     ),
-        //     boxShadow: PremiumDecorations.cardShadow(opacity: 0.06),
-        //   ),
-        //   child: Column(
-        //     crossAxisAlignment: CrossAxisAlignment.start,
-        //     children: [
-        //       Text(
-        //         'Ticket #${ticket.ticketId}',
-        //         style: theme.titleMedium?.copyWith(
-        //           fontWeight: FontWeight.w800,
-        //           color: AppColors.textPrimary,
-        //         ),
-        //       ),
-        //       const SizedBox(height: 10),
-        //       Row(
-        //         children: [
-        //           _TicketBadge(
-        //             label: ticket.displayStatus,
-        //             color: ticket.statusColor,
-        //           ),
-        //           const SizedBox(width: 8),
-        //           _TicketBadge(
-        //             label: ticket.displayPriority,
-        //             color: ticket.priorityColor,
-        //           ),
-        //         ],
-        //       ),
-        //     ],
-        //   ),
-        // ),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.accent.withValues(alpha: 0.5),
+                AppColors.white,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.primaryLight.withValues(alpha: 0.3),
+            ),
+            boxShadow: PremiumDecorations.cardShadow(opacity: 0.06),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ticket #${ticket.ticketId}',
+                style: theme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _TicketBadge(
+                    label: ticket.displayStatus,
+                    color: ticket.statusColor,
+                  ),
+                  const SizedBox(width: 8),
+                  _TicketBadge(
+                    label: ticket.displayPriority,
+                    color: ticket.priorityColor,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
         const SizedBox(height: 18),
         ModernSectionCard(
           title: 'Ticket Information',
@@ -119,12 +123,12 @@ class _TicketDetailBody extends StatelessWidget {
                 value: ticket.displaySubject,
                 showDivider: true,
               ),
-              // ModernInfoRow(
-              //   icon: Icons.category_outlined,
-              //   label: 'Category',
-              //   value: ticket.displayCategory,
-              //   showDivider: true,
-              // ),
+              ModernInfoRow(
+                icon: Icons.category_outlined,
+                label: 'Category',
+                value: ticket.displayCategory,
+                showDivider: true,
+              ),
               ModernInfoRow(
                 icon: Icons.message_outlined,
                 label: 'Message',
@@ -132,76 +136,76 @@ class _TicketDetailBody extends StatelessWidget {
                 showDivider: true,
               ),
               // ModernInfoRow(
-              //   icon: Icons.flag_outlined,
-              //   label: 'Priority',
-              //   value: ticket.displayPriority,
-              //   showDivider: true,
-              // ),
-              // ModernInfoRow(
               //   icon: Icons.info_outline_rounded,
               //   label: 'Status',
               //   value: ticket.displayStatus,
               //   showDivider: true,
               // ),
               // ModernInfoRow(
-              //   icon: Icons.calendar_today_outlined,
-              //   label: 'Created Date',
-              //   value: ticket.formattedCreatedAt,
-              //   showDivider: true,
-              // ),
-              // ModernInfoRow(
-              //   icon: Icons.schedule_outlined,
-              //   label: 'Last Replied At',
-              //   value: ticket.formattedLastRepliedAt,
+              //   icon: Icons.flag_outlined,
+              //   label: 'Priority',
+              //   value: ticket.displayPriority,
               //   showDivider: true,
               // ),
               // ModernInfoRow(
               //   icon: Icons.reply_outlined,
               //   label: 'Admin Reply',
               //   value: ticket.displayAdminReply,
+              //   showDivider: true,
+              // ),
+              ModernInfoRow(
+                icon: Icons.calendar_today_outlined,
+                label: 'Created Date',
+                value: ticket.formattedCreatedAt,
+                showDivider: true,
+              ),
+              // ModernInfoRow(
+              //   icon: Icons.schedule_outlined,
+              //   label: 'Last Replied At',
+              //   value: ticket.formattedLastRepliedAt,
               //   showDivider: imageUrl != null,
               // ),
-              if (imageUrl != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Resolution Image',
-                        style: theme.labelLarge?.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CachedNetworkImage(
-                          imageUrl: imageUrl,
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(
-                            height: 180,
-                            color: AppColors.accent.withValues(alpha: 0.35),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                color: AppColors.primary,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          ),
-                          errorWidget: (_, __, ___) => Container(
-                            height: 180,
-                            color: AppColors.accent.withValues(alpha: 0.35),
-                            child: const Icon(Icons.broken_image_outlined),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              // if (imageUrl != null)
+              //   Padding(
+              //     padding: const EdgeInsets.only(top: 12),
+              //     child: Column(
+              //       crossAxisAlignment: CrossAxisAlignment.start,
+              //       children: [
+              //         Text(
+              //           'Resolution Image',
+              //           style: theme.labelLarge?.copyWith(
+              //             color: AppColors.textSecondary,
+              //             fontWeight: FontWeight.w700,
+              //           ),
+              //         ),
+              //         const SizedBox(height: 10),
+              //         ClipRRect(
+              //           borderRadius: BorderRadius.circular(12),
+              //           child: CachedNetworkImage(
+              //             imageUrl: imageUrl,
+              //             height: 180,
+              //             width: double.infinity,
+              //             fit: BoxFit.cover,
+              //             placeholder: (_, __) => Container(
+              //               height: 180,
+              //               color: AppColors.accent.withValues(alpha: 0.35),
+              //               child: const Center(
+              //                 child: CircularProgressIndicator(
+              //                   color: AppColors.primary,
+              //                   strokeWidth: 2,
+              //                 ),
+              //               ),
+              //             ),
+              //             errorWidget: (_, __, ___) => Container(
+              //               height: 180,
+              //               color: AppColors.accent.withValues(alpha: 0.35),
+              //               child: const Icon(Icons.broken_image_outlined),
+              //             ),
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
             ],
           ),
         ),

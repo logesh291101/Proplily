@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
@@ -5,6 +7,7 @@ import 'package:proplilly/client/theme/premium_decorations.dart';
 import 'package:proplilly/client/theme/screen_spacing.dart';
 import 'package:proplilly/client/widgets/premium/premium_buttons.dart';
 import 'package:proplilly/client/widgets/premium/premium_error_state.dart';
+import 'package:proplilly/client/utils/property_map_launcher.dart';
 import 'package:proplilly/fieldagent/widgets/fieldagent_screen_scaffold.dart';
 import 'package:proplilly/fieldagent/fieldagent_my_schedule_property_detail_service.dart';
 import 'package:proplilly/fieldagent/my_schedule_property_detail_model.dart';
@@ -59,11 +62,24 @@ class _FieldAgentMySchedulePropertyDetailScreenState
 
     switch (result) {
       case MySchedulePropertyDetailFetchSuccess(:final model):
+        final detail = model.data;
+        log(
+          'Property Details lat/lng — '
+          'taskId: ${widget.taskId}, '
+          'propertyLat: ${detail.propertyLat}, '
+          'propertyLng: ${detail.propertyLng}, '
+          'hasMapCoordinates: ${detail.hasMapCoordinates}',
+          name: 'OpenInMap',
+        );
         setState(() {
-          _detail = model.data;
+          _detail = detail;
           _isLoading = false;
         });
       case MySchedulePropertyDetailFetchFailure(:final message):
+        log(
+          'Property Details fetch failed — taskId: ${widget.taskId}, message: $message',
+          name: 'OpenInMap',
+        );
         setState(() {
           _errorMessage = message;
           _isLoading = false;
@@ -121,7 +137,6 @@ class _FieldAgentMySchedulePropertyDetailScreenState
     }
 
     final horizontal = ScreenSpacing.horizontal(context);
-    final images = detail.imageUrls;
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -129,20 +144,20 @@ class _FieldAgentMySchedulePropertyDetailScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _PropertyImageCarousel(
-            images: images,
-            pageController: _pageController,
-            currentIndex: _currentImageIndex,
-            onPageChanged: (index) => setState(() => _currentImageIndex = index),
-          ),
-          const SizedBox(height: 18),
+          // _PropertyImageCarousel(
+          //   images: detail.imageUrls,
+          //   pageController: _pageController,
+          //   currentIndex: _currentImageIndex,
+          //   onPageChanged: (index) => setState(() => _currentImageIndex = index),
+          // ),
+          // const SizedBox(height: 18),
           _SectionCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  detail.propertyName?.trim().isNotEmpty == true
-                      ? detail.propertyName!.trim()
+                  detail.propertyName.trim().isNotEmpty
+                      ? detail.propertyName.trim()
                       : '—',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
@@ -151,8 +166,8 @@ class _FieldAgentMySchedulePropertyDetailScreenState
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  detail.address?.trim().isNotEmpty == true
-                      ? detail.address!.trim()
+                  detail.address.trim().isNotEmpty
+                      ? detail.address.trim()
                       : '—',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: AppColors.textSecondary,
@@ -161,9 +176,7 @@ class _FieldAgentMySchedulePropertyDetailScreenState
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  detail.city?.trim().isNotEmpty == true
-                      ? detail.city!.trim()
-                      : '—',
+                  detail.city.trim().isNotEmpty ? detail.city.trim() : '—',
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.w500,
@@ -188,20 +201,6 @@ class _FieldAgentMySchedulePropertyDetailScreenState
                   .toList(),
             ),
           ),
-          // const SizedBox(height: 14),
-          // _SectionCard(
-          //   title: 'Property Details',
-          //   child: Column(
-          //     children: detail.propertyDetailEntries
-          //         .map(
-          //           (entry) => _RecordRow(
-          //             label: entry.label,
-          //             value: entry.value,
-          //           ),
-          //         )
-          //         .toList(),
-          //   ),
-          // ),
           const SizedBox(height: 14),
           _SectionCard(
             title: 'Account Manager',
@@ -210,15 +209,21 @@ class _FieldAgentMySchedulePropertyDetailScreenState
               children: [
                 _RecordRow(
                   label: 'Name',
-                  value: detail.accountManagerName ?? '—',
+                  value: detail.accountManagerName.trim().isNotEmpty
+                      ? detail.accountManagerName.trim()
+                      : '—',
                 ),
                 _RecordRow(
                   label: 'Phone Number',
-                  value: detail.accountManagerPhone ?? '—',
+                  value: detail.accountManagerPhone.trim().isNotEmpty
+                      ? detail.accountManagerPhone.trim()
+                      : '—',
                 ),
                 _RecordRow(
                   label: 'Email Address',
-                  value: detail.accountManagerEmail ?? '—',
+                  value: detail.accountManagerEmail.trim().isNotEmpty
+                      ? detail.accountManagerEmail.trim()
+                      : '—',
                 ),
                 const SizedBox(height: 8),
                 PremiumPrimaryButton(
@@ -242,10 +247,22 @@ class _FieldAgentMySchedulePropertyDetailScreenState
           _SectionCard(
             title: 'Location',
             child: PremiumOutlineButton(
-              label: 'Open in Maps',
-              onPressed: detail.hasMapCoordinates
-                  ? () => _launchUri(detail.mapsUri, 'Maps')
-                  : null,
+              label: 'Open in Map',
+              onPressed: () {
+                log(
+                  'Open in Map tapped — '
+                  'taskId: ${widget.taskId}, '
+                  'propertyLat: ${detail.propertyLat}, '
+                  'propertyLng: ${detail.propertyLng}, '
+                  'hasMapCoordinates: ${detail.hasMapCoordinates}',
+                  name: 'OpenInMap',
+                );
+                PropertyMapLauncher.open(
+                  context,
+                  latitude: detail.propertyLat,
+                  longitude: detail.propertyLng,
+                );
+              },
             ),
           ),
         ],

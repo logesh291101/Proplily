@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:proplilly/client/screens/client_edit_property_screen.dart';
-import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/models/client_property_status_model.dart';
+import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
-import 'package:proplilly/client/widgets/premium/premium_buttons.dart';
-import 'package:proplilly/client/widgets/premium/premium_status_chip.dart';
 
 /// Card for one property from `GET /user/properties/status`.
 class PropertyStatusPropertyCard extends StatelessWidget {
@@ -13,22 +10,11 @@ class PropertyStatusPropertyCard extends StatelessWidget {
     required this.property,
   });
 
-  final ClientPropertyStatusItem property;
+  final ClientPropertyStatus property;
 
-  /// Reads a model field without crashing on stale hot-reload instances.
-  static String _safeString(String Function() read) {
-    try {
-      return read();
-    } catch (_) {
-      return '';
-    }
-  }
-
-  static String _displayLabel(String raw) {
-    final t = raw.trim();
-    if (t.isEmpty) return t;
-    if (t.length == 1) return t.toUpperCase();
-    return '${t[0].toUpperCase()}${t.substring(1).toLowerCase()}';
+  static String _display(String? value) {
+    final trimmed = value?.trim() ?? '';
+    return trimmed.isNotEmpty ? trimmed : '—';
   }
 
   static Color _statusColor(String raw) {
@@ -53,171 +39,255 @@ class PropertyStatusPropertyCard extends StatelessWidget {
     }
   }
 
-  static bool _isPositiveStatus(String raw) {
-    switch (raw.trim().toLowerCase()) {
-      case 'active':
-      case 'authorized':
-      case 'approved':
-        return true;
-      default:
-        return false;
-    }
+  static String _accountManagerLine(ClientPropertyStatus property) {
+    final name = property.accountManagerName.trim();
+    final phone = property.accountManagerPhone.trim();
+
+    if (name.isEmpty && phone.isEmpty) return '—';
+    if (name.isNotEmpty && phone.isNotEmpty) return '$name · $phone';
+    return name.isNotEmpty ? name : phone;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
 
-    final propertyName = _safeString(() => property.propertyName);
-    final propertyType = _safeString(() => property.propertyType);
-    final address = _safeString(() => property.address);
-    final city = _safeString(() => property.city);
-    final monitoringStatus = _safeString(() => property.monitoringStatus);
-    final authorizationStatus =
-        _safeString(() => property.authorizationStatus);
+    final propertyName = _display(property.propertyName);
+    final monitoringStatus = property.monitoringStatus.trim();
+    final statusLabel =
+        monitoringStatus.isNotEmpty ? monitoringStatus.toUpperCase() : '—';
+    final statusColor = monitoringStatus.isNotEmpty
+        ? _statusColor(monitoringStatus)
+        : AppColors.textSecondary;
 
-    final monitoringLabel = _displayLabel(monitoringStatus);
-    final authorizationLabel = _displayLabel(authorizationStatus);
-    final typeLabel = _displayLabel(propertyType);
-
-    final addressParts = [address.trim(), city.trim()].where((s) => s.isNotEmpty);
-    final locationLine = addressParts.join(', ');
-
-    final monitoringColor = _statusColor(monitoringStatus);
-    final authorizationColor = _statusColor(authorizationStatus);
+    final rows = <_StatusDetailRowData>[
+      _StatusDetailRowData(
+        icon: Icons.engineering_outlined,
+        label: 'Field Agent',
+        value: _display(property.coordinatorName),
+      ),
+      _StatusDetailRowData(
+        icon: Icons.support_agent_outlined,
+        label: 'Account Manager',
+        value: _accountManagerLine(property),
+      ),
+      _StatusDetailRowData(
+        icon: Icons.history_rounded,
+        label: 'Last Visit',
+        value: _display(property.lastVisit),
+      ),
+      _StatusDetailRowData(
+        icon: Icons.rate_review_outlined,
+        label: 'Review Status',
+        value: _display(property.latestReviewStatus),
+        showDivider: false,
+      ),
+    ];
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         color: AppColors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: AppColors.primaryLight.withValues(alpha: 0.28),
+          color: AppColors.primaryLight.withValues(alpha: 0.22),
         ),
-        boxShadow: PremiumDecorations.cardShadow(opacity: 0.10),
+        boxShadow: PremiumDecorations.cardShadow(opacity: 0.08),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            propertyName,
-            style: theme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-              height: 1.2,
+          Container(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary.withValues(alpha: 0.08),
+                  AppColors.accent.withValues(alpha: 0.35),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          // Text(
-          //   typeLabel,
-          //   style: theme.titleSmall?.copyWith(
-          //     color: AppColors.textSecondary,
-          //     fontWeight: FontWeight.w600,
-          //   ),
-          // ),
-          if (locationLine.isNotEmpty) ...[
-            //const SizedBox(height: 16),
-            Row(
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon(
-                //   Icons.location_on_outlined,
-                //   size: 20,
-                //   color: AppColors.primaryDark.withValues(alpha: 0.85),
-                // ),
-                //const SizedBox(width: 8),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: PremiumDecorations.iconTile(AppColors.primary),
+                  child: const Icon(
+                    Icons.home_work_outlined,
+                    size: 22,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    locationLine,
-                    style: theme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w500,
-                      height: 1.4,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        propertyName,
+                        style: theme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
+                          height: 1.25,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _StatusBadge(
+                        label: statusLabel,
+                        color: statusColor,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ],
-          const SizedBox(height: 20),
-          _StatusRow(
-            label: 'Monitoring',
-            chipLabel: monitoringLabel,
-            color: monitoringColor,
-            isPositive: _isPositiveStatus(monitoringStatus),
           ),
-          // const SizedBox(height: 12),
-          // _StatusRow(
-          //   label: 'Authorization',
-          //   chipLabel: authorizationLabel,
-          //   color: authorizationColor,
-          //   isPositive: _isPositiveStatus(authorizationStatus),
-          // ),
-          // const SizedBox(height: 20),
-          // PremiumOutlineButton(
-          //   label: 'Edit Property',
-          //   onPressed: () {
-          //     Navigator.of(context).push<bool>(
-          //       MaterialPageRoute<bool>(
-          //         builder: (_) => EditPropertyScreen(property: property),
-          //       ),
-          //     );
-          //   },
-          // ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+            child: Column(
+              children: [
+                for (final row in rows)
+                  _StatusDetailRow(
+                    icon: row.icon,
+                    label: row.label,
+                    value: row.value,
+                    showDivider: row.showDivider,
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _StatusRow extends StatelessWidget {
-  const _StatusRow({
+class _StatusDetailRowData {
+  const _StatusDetailRowData({
+    required this.icon,
     required this.label,
-    required this.chipLabel,
+    required this.value,
+    this.showDivider = true,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool showDivider;
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({
+    required this.label,
     required this.color,
-    required this.isPositive,
   });
 
   final String label;
-  final String chipLabel;
   final Color color;
-  final bool isPositive;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w800,
+          fontSize: 10,
+          letterSpacing: 0.7,
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusDetailRow extends StatelessWidget {
+  const _StatusDetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.showDivider,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
+    final isEmpty = value == '—';
 
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          flex: 2,
-          child: Text(
-            label,
-            style: theme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(
-          flex: 3,
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: chipLabel.isEmpty
-                ? Text(
-                    '—',
-                    style: theme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: PremiumDecorations.iconTile(
+                  AppColors.primary.withValues(alpha: 0.12),
+                ),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: AppColors.primaryDark,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label.toUpperCase(),
+                      style: theme.labelSmall?.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                        fontSize: 10,
+                      ),
                     ),
-                  )
-                : PremiumStatusChip(
-                    label: chipLabel,
-                    color: color,
-                    isPositive: isPositive,
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      value,
+                      style: theme.bodyMedium?.copyWith(
+                        color: isEmpty
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
+        if (showDivider)
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: 58,
+            endIndent: 10,
+            color: AppColors.primaryLight.withValues(alpha: 0.14),
+          ),
       ],
     );
   }

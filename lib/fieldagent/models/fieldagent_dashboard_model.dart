@@ -53,13 +53,13 @@ class DashboardData {
   final List<ScheduledTask> scheduledTasks;
   final Summary? summary;
   final String? fieldAgentName;
-  final String? userType;
+  final String? role;
 
   DashboardData({
     List<ScheduledTask>? scheduledTasks,
     this.summary,
     this.fieldAgentName,
-    this.userType,
+    this.role,
   }) : scheduledTasks = scheduledTasks ?? const [];
 
   factory DashboardData.fromJson(Map<String, dynamic> json) {
@@ -82,10 +82,8 @@ class DashboardData {
         profileMap?['agent_name'],
         profileMap?['name'],
       ]),
-      userType: _firstNonEmptyString([
-        json['user_type'],
+      role: _firstNonEmptyString([
         json['role'],
-        profileMap?['user_type'],
         profileMap?['role'],
       ]),
     );
@@ -96,7 +94,7 @@ class DashboardData {
       'scheduled_tasks': scheduledTasks.map((e) => e.toJson()).toList(),
       'summary': summary?.toJson(),
       'field_agent_name': fieldAgentName,
-      'user_type': userType,
+      'role': role,
     };
   }
 

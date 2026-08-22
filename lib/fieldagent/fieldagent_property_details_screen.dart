@@ -1,10 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
 import 'package:proplilly/client/theme/screen_spacing.dart';
+import 'package:proplilly/client/utils/property_map_launcher.dart';
 import 'package:proplilly/client/widgets/premium/premium_buttons.dart';
 import 'package:proplilly/fieldagent/widgets/fieldagent_screen_scaffold.dart';
 import 'package:proplilly/fieldagent/fieldagent_my_schedule_screen.dart';
@@ -128,7 +127,32 @@ class _FieldAgentPropertyDetailsScreenState
             const SizedBox(height: 14),
             _SectionCard(
               title: 'Property Location',
-              child: _PropertyLocationMap(property: property),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (property.hasMapCoordinates) ...[
+                    _RecordRow(
+                      label: 'Latitude',
+                      value: property.latitude!.trim(),
+                    ),
+                    _RecordRow(
+                      label: 'Longitude',
+                      value: property.longitude!.trim(),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  PremiumOutlineButton(
+                    label: 'Open on Map',
+                    onPressed: property.hasMapCoordinates
+                        ? () => PropertyMapLauncher.open(
+                              context,
+                              latitude: property.latitude ?? '',
+                              longitude: property.longitude ?? '',
+                            )
+                        : null,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 14),
             _SectionCard(
@@ -193,156 +217,6 @@ class _FieldAgentPropertyDetailsScreenState
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PropertyLocationMap extends StatefulWidget {
-  const _PropertyLocationMap({required this.property});
-
-  final PropertyData property;
-
-  @override
-  State<_PropertyLocationMap> createState() => _PropertyLocationMapState();
-}
-
-class _PropertyLocationMapState extends State<_PropertyLocationMap> {
-  static const double _initialZoom = 15;
-
-  late final MapController _mapController;
-  late final LatLng _center;
-
-  @override
-  void initState() {
-    super.initState();
-    _mapController = MapController();
-    _center = LatLng(
-      double.parse(widget.property.latitude!.trim()),
-      double.parse(widget.property.longitude!.trim()),
-    );
-  }
-
-  @override
-  void dispose() {
-    _mapController.dispose();
-    super.dispose();
-  }
-
-  void _zoomIn() {
-    final zoom = (_mapController.camera.zoom + 1).clamp(3.0, 18.0);
-    _mapController.move(_center, zoom);
-  }
-
-  void _zoomOut() {
-    final zoom = (_mapController.camera.zoom - 1).clamp(3.0, 18.0);
-    _mapController.move(_center, zoom);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final property = widget.property;
-
-    if (!property.hasMapCoordinates) {
-      return Text(
-        'Location not available.',
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: SizedBox(
-            height: 220,
-            child: Stack(
-              children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _center,
-                    initialZoom: _initialZoom,
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                    ),
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.proplilly.app',
-                    ),
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _center,
-                          width: 40,
-                          height: 40,
-                          child: const Icon(
-                            Icons.location_pin,
-                            size: 40,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                Positioned(
-                  right: 12,
-                  top: 12,
-                  child: Column(
-                    children: [
-                      _MapZoomButton(icon: Icons.add, onTap: _zoomIn),
-                      const SizedBox(height: 8),
-                      _MapZoomButton(icon: Icons.remove, onTap: _zoomOut),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        _RecordRow(
-          label: 'Latitude',
-          value: property.latitude!.trim(),
-        ),
-        _RecordRow(
-          label: 'Longitude',
-          value: property.longitude!.trim(),
-        ),
-      ],
-    );
-  }
-}
-
-class _MapZoomButton extends StatelessWidget {
-  const _MapZoomButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.white,
-      elevation: 3,
-      shadowColor: AppColors.primaryDark.withValues(alpha: 0.2),
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
-        child: SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(icon, color: AppColors.primaryDark, size: 22),
         ),
       ),
     );

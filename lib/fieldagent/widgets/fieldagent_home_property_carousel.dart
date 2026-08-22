@@ -2,10 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:proplilly/client/theme/app_colors.dart';
 import 'package:proplilly/client/theme/premium_decorations.dart';
+import 'package:proplilly/client/utils/property_map_launcher.dart';
 import 'package:proplilly/client/widgets/premium/premium_buttons.dart';
 import 'package:proplilly/fieldagent/fieldagent_my_schedules_model.dart';
 import 'package:proplilly/fieldagent/fieldagent_property_details_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Assigned properties carousel for the Field Agent home screen.
 class FieldAgentHomePropertyCarousel extends StatefulWidget {
@@ -70,19 +70,12 @@ class _FieldAgentHomePropertyCarouselState
     );
   }
 
-  Future<void> _openStreetMap(PropertyData property) async {
-    final uri = property.openStreetMapUri;
-    if (uri == null) return;
-
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!launched && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not open map.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
+  Future<void> _openOnMap(PropertyData property) async {
+    await PropertyMapLauncher.open(
+      context,
+      latitude: property.latitude ?? '',
+      longitude: property.longitude ?? '',
+    );
   }
 
   void _openDetails(PropertyData property) {
@@ -141,7 +134,7 @@ class _FieldAgentHomePropertyCarouselState
           ),
           _PropertyCarouselContent(
             property: property,
-            onOpenStreetMap: () => _openStreetMap(property),
+            onOpenOnMap: () => _openOnMap(property),
             onViewDetails: () => _openDetails(property),
           ),
         ],
@@ -260,12 +253,12 @@ class _PropertyImageBanner extends StatelessWidget {
 class _PropertyCarouselContent extends StatelessWidget {
   const _PropertyCarouselContent({
     required this.property,
-    required this.onOpenStreetMap,
+    required this.onOpenOnMap,
     required this.onViewDetails,
   });
 
   final PropertyData property;
-  final VoidCallback onOpenStreetMap;
+  final VoidCallback onOpenOnMap;
   final VoidCallback onViewDetails;
 
   String get _statusDetail {
@@ -307,7 +300,7 @@ class _PropertyCarouselContent extends StatelessWidget {
                 child: PremiumOutlineButton(
                   label: 'Open on Map',
                   onPressed:
-                      property.hasMapCoordinates ? onOpenStreetMap : null,
+                      property.hasMapCoordinates ? onOpenOnMap : null,
                 ),
               ),
               const SizedBox(width: 12),

@@ -59,35 +59,30 @@ class _FieldAgentRaiseTicketViewState extends State<_FieldAgentRaiseTicketView> 
 
     if (!mounted) return;
 
-    try {
-      switch (result) {
-        case ClientSupportTicketSuccess(:final message):
-          final text = message?.trim();
-          if (text != null && text.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(text),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        case ClientSupportTicketFailure(:final message):
-          final text = message?.trim();
-          if (text != null && text.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(text),
-                backgroundColor: AppColors.error,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-      }
-    } finally {
-      if (mounted) {
+    switch (result) {
+      case ClientSupportTicketSuccess(:final message):
+        final text = message?.trim();
+        if (text != null && text.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(text),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
         _clearForm();
-      }
+      case ClientSupportTicketFailure(:final message):
+        final text = message?.trim();
+        if (text != null && text.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(text),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
     }
   }
 

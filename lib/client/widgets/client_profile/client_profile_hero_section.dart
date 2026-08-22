@@ -190,20 +190,22 @@ class _ProfileAvatarState extends State<_ProfileAvatar> {
             backgroundImage: _hasValidImageUrl
                 ? NetworkImage(imageUrl!)
                 : null,
-            onBackgroundImageError: (_, __) {
+            onBackgroundImageError: _hasValidImageUrl
+                ? (_, __) {
               if (mounted) {
                 setState(() => _imageFailed = true);
               }
-            },
+            }
+                : null,
             child: _hasValidImageUrl
                 ? null
                 : Text(
-                    widget.avatarLetter,
-                    style: theme.headlineMedium?.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+              widget.avatarLetter,
+              style: theme.headlineMedium?.copyWith(
+                color: AppColors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
         ),
         // Positioned(

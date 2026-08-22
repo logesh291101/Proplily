@@ -1,307 +1,217 @@
-import 'dart:convert';
-
-/// API response for `GET {live_url}/coordinator_api/tasks/{task_id}`.
 class MySchedulePropertyDetailModel {
+  final bool status;
+  final String message;
+  final MySchedulePropertyDetail data;
+  final dynamic errors;
+
   MySchedulePropertyDetailModel({
-    this.status,
-    this.message,
-    this.data,
+    required this.status,
+    required this.message,
+    required this.data,
     this.errors,
   });
 
-  final bool? status;
-  final String? message;
-  final MySchedulePropertyDetail? data;
-  final dynamic errors;
-
   factory MySchedulePropertyDetailModel.fromJson(Map<String, dynamic> json) {
+    final rawData = json['data'];
+    final dataMap = rawData is Map
+        ? Map<String, dynamic>.from(rawData)
+        : <String, dynamic>{};
+
     return MySchedulePropertyDetailModel(
       status: _parseStatus(json['status']),
-      message: json['message']?.toString(),
-      data: _parseDetail(json['data']),
+      message: '${json['message'] ?? ''}',
+      data: MySchedulePropertyDetail.fromJson(dataMap),
       errors: json['errors'],
     );
+  }
+
+  static bool _parseStatus(dynamic raw) {
+    if (raw == true || raw == 1) return true;
+    if (raw == false || raw == 0 || raw == null) return false;
+    final text = '$raw'.trim().toLowerCase();
+    return text == 'true' || text == '1' || text == '200' || text == 'success';
   }
 
   Map<String, dynamic> toJson() {
     return {
       'status': status,
       'message': message,
-      'data': data?.toJson(),
+      'data': data.toJson(),
       'errors': errors,
     };
-  }
-
-  bool get isSuccess => status == true;
-
-  static bool? _parseStatus(dynamic raw) {
-    if (raw == null) return null;
-    if (raw is bool) return raw;
-    if (raw is int) return raw == 200;
-    if (raw is num) return raw == 200;
-    if (raw is String) {
-      final t = raw.trim().toLowerCase();
-      if (t == '200' || t == 'true') return true;
-      if (t == 'false') return false;
-    }
-    return null;
-  }
-
-  static MySchedulePropertyDetail? _parseDetail(dynamic raw) {
-    if (raw == null) return null;
-
-    if (raw is Map) {
-      final map = Map<String, dynamic>.from(raw);
-      if (map['property'] is Map) {
-        return MySchedulePropertyDetail.fromJson(
-          Map<String, dynamic>.from(map['property'] as Map),
-          task: map,
-        );
-      }
-      return MySchedulePropertyDetail.fromJson(map);
-    }
-
-    return null;
   }
 }
 
 class MySchedulePropertyDetail {
+  final String taskId;
+  final String assignmentId;
+  final String propertyId;
+  final String fieldAgentId;
+  final String assignedBy;
+  final String visitType;
+  final String scheduledDate;
+  final String startTime;
+  final String endTime;
+  final String priority;
+  final String isRecurring;
+  final String parentTaskId;
+  final String status;
+  final String assignmentTimestamp;
+  final String? startedAt;
+  final String? completedAt;
+  final String? notes;
+  final String createdAt;
+  final String updatedAt;
+  final String propertyName;
+  final String address;
+  final String city;
+  final String propertyLat;
+  final String propertyLng;
+  final String accountManagerName;
+  final String accountManagerPhone;
+  final String accountManagerEmail;
+
   MySchedulePropertyDetail({
-    this.taskId,
-    this.propertyId,
-    this.propertyName,
-    this.address,
-    this.city,
-    this.status,
-    this.visitType,
-    this.scheduledDate,
-    this.startTime,
-    this.endTime,
-    this.priority,
-    this.propertyType,
-    this.plotType,
-    this.plotSize,
-    this.sizeUnit,
-    this.state,
-    this.latitude,
-    this.longitude,
-    this.propertyPhoto,
-    this.accountManagerName,
-    this.accountManagerPhone,
-    this.accountManagerEmail,
-    List<String>? propertyImages,
-  }) : propertyImages = propertyImages ?? const [];
+    required this.taskId,
+    required this.assignmentId,
+    required this.propertyId,
+    required this.fieldAgentId,
+    required this.assignedBy,
+    required this.visitType,
+    required this.scheduledDate,
+    required this.startTime,
+    required this.endTime,
+    required this.priority,
+    required this.isRecurring,
+    required this.parentTaskId,
+    required this.status,
+    required this.assignmentTimestamp,
+    this.startedAt,
+    this.completedAt,
+    this.notes,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.propertyName,
+    required this.address,
+    required this.city,
+    required this.propertyLat,
+    required this.propertyLng,
+    required this.accountManagerName,
+    required this.accountManagerPhone,
+    required this.accountManagerEmail,
+  });
 
-  final String? taskId;
-  final String? propertyId;
-  final String? propertyName;
-  final String? address;
-  final String? city;
-  final String? status;
-  final String? visitType;
-  final String? scheduledDate;
-  final String? startTime;
-  final String? endTime;
-  final String? priority;
-  final String? propertyType;
-  final String? plotType;
-  final String? plotSize;
-  final String? sizeUnit;
-  final String? state;
-  final String? latitude;
-  final String? longitude;
-  final String? propertyPhoto;
-  final String? accountManagerName;
-  final String? accountManagerPhone;
-  final String? accountManagerEmail;
-  final List<String> propertyImages;
-
-  factory MySchedulePropertyDetail.fromJson(
-    Map<String, dynamic> json, {
-    Map<String, dynamic>? task,
-  }) {
-    final taskMap = task ?? json;
-    final propertyMap = json['property'] is Map
-        ? Map<String, dynamic>.from(json['property'] as Map)
-        : json;
-    final accountManager = _readMap(
-      json['account_manager'] ?? propertyMap['account_manager'],
-    );
-
+  factory MySchedulePropertyDetail.fromJson(Map<String, dynamic> json) {
     return MySchedulePropertyDetail(
-      taskId: _stringOrNull(taskMap['task_id']),
-      propertyId: _stringOrNull(
-        propertyMap['property_id'] ?? taskMap['property_id'],
-      ),
-      propertyName: _stringOrNull(
-        propertyMap['property_name'] ?? taskMap['property_name'],
-      ),
-      address: _stringOrNull(propertyMap['address'] ?? taskMap['address']),
-      city: _stringOrNull(propertyMap['city'] ?? taskMap['city']),
-      status: _stringOrNull(taskMap['status'] ?? propertyMap['status']),
-      visitType: _stringOrNull(taskMap['visit_type']),
-      scheduledDate: _stringOrNull(taskMap['scheduled_date']),
-      startTime: _stringOrNull(taskMap['start_time']),
-      endTime: _stringOrNull(taskMap['end_time']),
-      priority: _stringOrNull(taskMap['priority']),
-      propertyType: _stringOrNull(propertyMap['property_type']),
-      plotType: _stringOrNull(propertyMap['plot_type']),
-      plotSize: _stringOrNull(propertyMap['plot_size']),
-      sizeUnit: _stringOrNull(propertyMap['size_unit']),
-      state: _stringOrNull(propertyMap['state']),
-      latitude: _stringOrNull(propertyMap['latitude'] ?? taskMap['latitude']),
-      longitude:
-          _stringOrNull(propertyMap['longitude'] ?? taskMap['longitude']),
-      propertyPhoto: _stringOrNull(propertyMap['property_photo']),
-      accountManagerName: _firstNonEmpty([
-        _stringOrNull(json['account_manager_name']),
-        _stringOrNull(propertyMap['account_manager_name']),
-        _stringOrNull(taskMap['account_manager_name']),
-        _stringOrNull(accountManager?['name']),
-        _stringOrNull(accountManager?['manager_name']),
-      ]),
-      accountManagerPhone: _firstNonEmpty([
-        _stringOrNull(json['account_manager_phone']),
-        _stringOrNull(propertyMap['account_manager_phone']),
-        _stringOrNull(taskMap['account_manager_phone']),
-        _stringOrNull(accountManager?['phone']),
-        _stringOrNull(accountManager?['phone_number']),
-      ]),
-      accountManagerEmail: _firstNonEmpty([
-        _stringOrNull(json['account_manager_email']),
-        _stringOrNull(propertyMap['account_manager_email']),
-        _stringOrNull(taskMap['account_manager_email']),
-        _stringOrNull(accountManager?['email']),
-        _stringOrNull(accountManager?['email_address']),
-      ]),
-      propertyImages: _parseImages(
-        propertyPhoto: propertyMap['property_photo'] ?? taskMap['property_photo'],
-        images: propertyMap['property_images'] ??
-            propertyMap['images'] ??
-            taskMap['property_images'] ??
-            taskMap['images'],
-      ),
+      taskId: '${json['task_id'] ?? ''}',
+      assignmentId: '${json['assignment_id'] ?? ''}',
+      propertyId: '${json['property_id'] ?? ''}',
+      fieldAgentId: '${json['field_agent_id'] ?? ''}',
+      assignedBy: '${json['assigned_by'] ?? ''}',
+      visitType: '${json['visit_type'] ?? ''}',
+      scheduledDate: '${json['scheduled_date'] ?? ''}',
+      startTime: '${json['start_time'] ?? ''}',
+      endTime: '${json['end_time'] ?? ''}',
+      priority: '${json['priority'] ?? ''}',
+      isRecurring: '${json['is_recurring'] ?? ''}',
+      parentTaskId: '${json['parent_task_id'] ?? ''}',
+      status: '${json['status'] ?? ''}',
+      assignmentTimestamp: '${json['assignment_timestamp'] ?? ''}',
+      startedAt: json['started_at']?.toString(),
+      completedAt: json['completed_at']?.toString(),
+      notes: json['notes']?.toString(),
+      createdAt: '${json['created_at'] ?? ''}',
+      updatedAt: '${json['updated_at'] ?? ''}',
+      propertyName: '${json['property_name'] ?? ''}',
+      address: '${json['address'] ?? ''}',
+      city: '${json['city'] ?? ''}',
+      propertyLat: '${json['property_lat'] ?? ''}',
+      propertyLng: '${json['property_lng'] ?? ''}',
+      accountManagerName: '${json['account_manager_name'] ?? ''}',
+      accountManagerPhone: '${json['account_manager_phone'] ?? ''}',
+      accountManagerEmail: '${json['account_manager_email'] ?? ''}',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'task_id': taskId,
+      'assignment_id': assignmentId,
       'property_id': propertyId,
-      'property_name': propertyName,
-      'address': address,
-      'city': city,
-      'status': status,
+      'field_agent_id': fieldAgentId,
+      'assigned_by': assignedBy,
       'visit_type': visitType,
       'scheduled_date': scheduledDate,
       'start_time': startTime,
       'end_time': endTime,
       'priority': priority,
-      'property_type': propertyType,
-      'plot_type': plotType,
-      'plot_size': plotSize,
-      'size_unit': sizeUnit,
-      'state': state,
-      'latitude': latitude,
-      'longitude': longitude,
-      'property_photo': propertyPhoto,
+      'is_recurring': isRecurring,
+      'parent_task_id': parentTaskId,
+      'status': status,
+      'assignment_timestamp': assignmentTimestamp,
+      'started_at': startedAt,
+      'completed_at': completedAt,
+      'notes': notes,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
+      'property_name': propertyName,
+      'address': address,
+      'city': city,
+      'property_lat': propertyLat,
+      'property_lng': propertyLng,
       'account_manager_name': accountManagerName,
       'account_manager_phone': accountManagerPhone,
       'account_manager_email': accountManagerEmail,
-      'property_images': propertyImages,
     };
   }
+}
 
+/// UI helpers preserved for existing Property Details / Submit Report screens.
+extension MySchedulePropertyDetailUi on MySchedulePropertyDetail {
   String get locationLine {
-    final parts = [address?.trim(), city?.trim()]
-        .whereType<String>()
+    final parts = [address.trim(), city.trim()]
         .where((part) => part.isNotEmpty)
         .toList();
     return parts.join(', ');
   }
 
-  String get plotSizeDisplay {
-    final size = plotSize?.trim();
-    if (size == null || size.isEmpty) return '—';
-    final unit = sizeUnit?.trim();
-    if (unit == null || unit.isEmpty) return size;
-    return '$size $unit';
-  }
-
-  String? get timeRange {
-    final start = startTime?.trim();
-    final end = endTime?.trim();
-    if ((start == null || start.isEmpty) && (end == null || end.isEmpty)) {
-      return null;
-    }
-    if (start != null &&
-        start.isNotEmpty &&
-        end != null &&
-        end.isNotEmpty) {
-      return '$start - $end';
-    }
-    return start ?? end;
-  }
-
-  List<String> get imageUrls {
-    if (propertyImages.isNotEmpty) return propertyImages;
-    final photo = propertyPhoto?.trim();
-    if (photo == null || photo.isEmpty) return const [];
-    return _parseImages(propertyPhoto: photo);
-  }
-
   bool get hasMapCoordinates {
-    final lat = latitude?.trim();
-    final lng = longitude?.trim();
-    return lat != null &&
-        lat.isNotEmpty &&
-        lng != null &&
-        lng.isNotEmpty &&
-        double.tryParse(lat) != null &&
-        double.tryParse(lng) != null;
+    final lat = propertyLat.trim();
+    final lng = propertyLng.trim();
+    if (lat.isEmpty || lng.isEmpty) return false;
+    if (lat == '0' || lng == '0') return false;
+    final latValue = double.tryParse(lat);
+    final lngValue = double.tryParse(lng);
+    if (latValue == null || lngValue == null) return false;
+    if (latValue == 0 || lngValue == 0) return false;
+    return true;
   }
 
   Uri? get mapsUri {
     if (!hasMapCoordinates) return null;
     return Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=${latitude!.trim()},${longitude!.trim()}',
+      'https://www.google.com/maps/search/?api=1&query=${propertyLat.trim()},${propertyLng.trim()}',
     );
   }
 
   Uri? get callUri {
-    final phone = accountManagerPhone?.trim();
-    if (phone == null || phone.isEmpty) return null;
+    final phone = accountManagerPhone.trim();
+    if (phone.isEmpty) return null;
     return Uri(scheme: 'tel', path: phone);
   }
 
   Uri? get emailUri {
-    final email = accountManagerEmail?.trim();
-    if (email == null || email.isEmpty) return null;
+    final email = accountManagerEmail.trim();
+    if (email.isEmpty) return null;
     return Uri(scheme: 'mailto', path: email);
   }
 
-  List<({String label, String value})> get propertyDetailEntries {
-    final entries = <({String label, String? value})>[
-      (label: 'Property Type', value: propertyType),
-      (label: 'Plot Type', value: plotType),
-      (label: 'Plot Size', value: plotSizeDisplay == '—' ? null : plotSizeDisplay),
-      (label: 'State', value: state),
-      (label: 'Latitude', value: latitude),
-      (label: 'Longitude', value: longitude),
-    ];
-
-    return entries
-        .where((entry) => entry.value?.trim().isNotEmpty == true)
-        .map((entry) => (label: entry.label, value: entry.value!.trim()))
-        .toList();
-  }
+  List<String> get imageUrls => const [];
 
   List<({String label, String value})> get scheduleInfoEntries {
     final entries = <({String label, String? value})>[
       (label: 'Visit Type', value: visitType),
       (label: 'Scheduled Date', value: scheduledDate),
-      // (label: 'Start Time', value: startTime),
-      // (label: 'End Time', value: endTime),
       (label: 'Priority', value: priority),
       (label: 'Status', value: status),
     ];
@@ -310,89 +220,5 @@ class MySchedulePropertyDetail {
         .where((entry) => entry.value?.trim().isNotEmpty == true)
         .map((entry) => (label: entry.label, value: entry.value!.trim()))
         .toList();
-  }
-
-  static String? _stringOrNull(dynamic raw) {
-    if (raw == null) return null;
-    if (raw is String) return raw.isEmpty ? null : raw;
-    return raw.toString();
-  }
-
-  static String? _firstNonEmpty(List<String?> values) {
-    for (final value in values) {
-      final trimmed = value?.trim();
-      if (trimmed != null && trimmed.isNotEmpty) return trimmed;
-    }
-    return null;
-  }
-
-  static Map<String, dynamic>? _readMap(dynamic raw) {
-    if (raw is Map<String, dynamic>) return raw;
-    if (raw is Map) return Map<String, dynamic>.from(raw);
-    return null;
-  }
-
-  static List<String> _parseImages({
-    dynamic propertyPhoto,
-    dynamic images,
-  }) {
-    final urls = <String>[];
-
-    void addUrl(String? raw) {
-      final trimmed = raw?.trim();
-      if (trimmed != null && trimmed.isNotEmpty && !urls.contains(trimmed)) {
-        urls.add(trimmed);
-      }
-    }
-
-    if (images is List) {
-      for (final item in images) {
-        if (item is Map) {
-          addUrl(_stringOrNull(item['url']) ?? _stringOrNull(item['image']));
-        } else {
-          addUrl(_stringOrNull(item));
-        }
-      }
-    } else if (images is String && images.trim().isNotEmpty) {
-      _addUrlsFromString(images, addUrl);
-    }
-
-    if (propertyPhoto != null) {
-      if (propertyPhoto is List) {
-        for (final item in propertyPhoto) {
-          addUrl(_stringOrNull(item));
-        }
-      } else if (propertyPhoto is String) {
-        _addUrlsFromString(propertyPhoto, addUrl);
-      }
-    }
-
-    return urls;
-  }
-
-  static void _addUrlsFromString(String raw, void Function(String?) addUrl) {
-    final trimmed = raw.trim();
-    if (trimmed.isEmpty) return;
-
-    if (trimmed.startsWith('[')) {
-      try {
-        final decoded = jsonDecode(trimmed);
-        if (decoded is List) {
-          for (final item in decoded) {
-            addUrl(_stringOrNull(item));
-          }
-          return;
-        }
-      } catch (_) {}
-    }
-
-    if (trimmed.contains(',')) {
-      for (final part in trimmed.split(',')) {
-        addUrl(part);
-      }
-      return;
-    }
-
-    addUrl(trimmed);
   }
 }

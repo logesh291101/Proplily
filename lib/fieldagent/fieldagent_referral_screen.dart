@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:proplilly/fieldagent/fieldagent_my_referrals_screen.dart';
 import 'package:proplilly/client/data/client_country_codes.dart';
 import 'package:proplilly/client/models/client_country_code.dart';
 import 'package:proplilly/client/providers/client_referral_provider.dart';
@@ -140,7 +141,19 @@ class _FieldAgentReferralViewState extends State<_FieldAgentReferralView> {
                       referralCode: referralProvider.referralCode,
                     ),
                   ),
-                  const SizedBox(height:10),
+                  const SizedBox(height: 16),
+                  PremiumPrimaryButton(
+                    label: 'My Referrals',
+                    icon: Icons.people_alt_outlined,
+                    onPressed: () {
+                      Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const FieldAgentMyReferralsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   _FieldAgentReferralFormCard(
                     formKey: _formKey,
                     fullNameController: _fullNameController,

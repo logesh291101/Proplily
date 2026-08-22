@@ -13,8 +13,9 @@ class EditClientProfileProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   Future<EditClientProfileResult> updateProfile({
-    required String name,
-    required String phone,
+    String? name,
+    String? phone,
+    String? profileImagePath,
   }) async {
     if (_isLoading) {
       return const EditClientProfileFailure(message: null);
@@ -23,14 +24,15 @@ class EditClientProfileProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final result = await _editClientProfileService.updateProfile(
-      name: name.trim(),
-      phone: phone.trim(),
-    );
-
-    _isLoading = false;
-    notifyListeners();
-
-    return result;
+    try {
+      return await _editClientProfileService.updateProfile(
+        name: name?.trim(),
+        phone: phone?.trim(),
+        profileImagePath: profileImagePath?.trim(),
+      );
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }
